@@ -1,3 +1,4 @@
+[SPRINT-1 (2).md](https://github.com/user-attachments/files/31279998/SPRINT-1.2.md)
 # SPRINT 1 — Fundação: auth, estrutura comercial e escopo
 
 > **Autorizada.** Ordem de execução fixa, definida pelo responsável.
@@ -47,10 +48,26 @@ vitest.config.ts  vitest.setup.ts  playwright.config.ts
   `page-header`, `mobile-nav`
 - `app/dev/componentes` — catálogo vivo, 404 em produção
 
+**Cinco correções obrigatórias na cópia** — `VEGAS-PLATFORM-UI-STANDARD.md` §3.1.
+São defeitos conhecidos do sistema de origem; copiar sem corrigir é replicá-los:
+
+1. `Peach 600`: `#A85C4E` → ~`#9E5445` (AA sobre `Peach 50`)
+2. criar `--vg-border-field` ~`#8E90AD` para borda de input (3:1)
+3. label visível permanente; placeholder nunca substitui rótulo
+4. eliminar `text-ink-muted`; usar `ink-secondary` ou `muted` conforme a função
+5. sem espelho manual de token — `tokens.css` é a fonte, e a sincronia com
+   `brand.ts`/JSON vira **teste**, não convenção
+
+**Auditoria de alvo touch de 44 px** (UI Standard §19) nos componentes copiados:
+`button`, `input`, `select`, `checkbox` e linhas de tabela. O sistema de origem
+foi construído para desktop administrativo; o CRM roda em tablet no campo.
+Antecipada da Sprint 6 para cá — corrigir na cópia custa uma fração de corrigir
+depois em todas as telas.
+
 Não trazer `costs/cost-rule-card` nem páginas de negócio de Agregados.
 
 *Aceite:* catálogo de componentes renderiza; nenhum hexadecimal fora de
-`tokens.css` (lint).
+`tokens.css` (lint); as cinco correções aplicadas; contraste AA verificado.
 
 ## 3 · Supabase e ambientes
 
