@@ -11,7 +11,7 @@ Planejamento. **Nenhum código, nenhum repositório, nenhuma migration.**
 
 **Entregas**
 
-- Diagnóstico do repositório-base (branch `sprint-3-relatorios-e-estrutura-comercial`)
+- Diagnóstico do repositório-base (branch `sprint-3/relatorios-e-estrutura-comercial`)
 - 26 decisões arquiteturais fechadas, com rationale e alternativas descartadas
 - Modelo de dados proposto, com índices, constraints e ordem de migrations
 - Matriz de permissões e estratégia de resolução de escopo

@@ -1,4 +1,3 @@
-[VEGAS-PLATFORM-UI-STANDARD (2).md](https://github.com/user-attachments/files/31279975/VEGAS-PLATFORM-UI-STANDARD.2.md)
 # VEGAS PLATFORM UI STANDARD
 
 **Padrão visual, estrutural e de experiência para sistemas internos**

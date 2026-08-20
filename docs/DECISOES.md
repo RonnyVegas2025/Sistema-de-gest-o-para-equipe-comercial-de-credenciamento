@@ -1,4 +1,3 @@
-[DECISOES.md](https://github.com/user-attachments/files/31279740/DECISOES.md)
 # DECISÕES ARQUITETURAIS — CRM Comercial de Credenciamento Vegas
 
 > Registro canônico de decisões técnicas. Decisão registrada aqui não é alterada
@@ -9,7 +8,7 @@
 | | |
 | --- | --- |
 | Sistema | CRM Comercial de Credenciamento Vegas |
-| Base técnica | Painel ADM de Produtos Agregados, branch `sprint-3-relatorios-e-estrutura-comercial` |
+| Base técnica | Painel ADM de Produtos Agregados, branch `sprint-3/relatorios-e-estrutura-comercial` |
 | Estado | Sprint 0 — documentação aprovada, implementação não iniciada |
 | Decisões fechadas | D-001 a D-026 |
 

@@ -1,4 +1,3 @@
-[DIVERGENCIAS_BASE.md](https://github.com/user-attachments/files/31280055/DIVERGENCIAS_BASE.md)
 # DIVERGÊNCIAS COM A BASE TÉCNICA
 
 > Registro do que o documento *Base técnica reaproveitável — Vegas Card* afirma

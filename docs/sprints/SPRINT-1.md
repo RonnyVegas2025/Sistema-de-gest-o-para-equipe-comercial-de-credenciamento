@@ -1,4 +1,3 @@
-[SPRINT-1 (2).md](https://github.com/user-attachments/files/31279998/SPRINT-1.2.md)
 # SPRINT 1 — Fundação: auth, estrutura comercial e escopo
 
 > **Autorizada.** Ordem de execução fixa, definida pelo responsável.
@@ -11,8 +10,9 @@ Fontes canônicas: `DECISOES.md` (D-001 a D-026) · `MODELO_DADOS.md` ·
 `RLS_PERMISSOES.md` · `DIVERGENCIAS_BASE.md`.
 
 **Repositório-base de referência:** branch
-`sprint-3-relatorios-e-estrutura-comercial`. Inspecionar `main` produz
-diagnóstico errado — está três entregas atrás.
+`sprint-3/relatorios-e-estrutura-comercial`. Inspecionar `main` produz
+diagnóstico errado — está uma entrega atrás — `main` está na Sprint 2 (v0.4.0)
+e a branch de Sprint 3 tem 10 commits à frente.
 
 ---
 
@@ -38,7 +38,10 @@ vitest.config.ts  vitest.setup.ts  playwright.config.ts
 **`next.config.mjs` não é cópia literal:** `Permissions-Policy` vai com
 `geolocation=(self)`; câmera e microfone permanecem desligados (D-020).
 
-*Aceite:* `npm run verify` passa num projeto vazio.
+*Aceite:* `npm run verify` passa num projeto sem domínio, sem tela e sem
+migration. `src/app/layout.tsx` e `src/app/page.tsx` nascem mínimos aqui — não
+são scaffolding descartável: crescem na etapa 2, quando o layout recebe
+`globals.css` e a fonte, e a página vira o redirect para `/inicio`.
 
 ## 2 · Next.js, Tailwind, tokens e shell Vegas
 
@@ -47,6 +50,10 @@ vitest.config.ts  vitest.setup.ts  playwright.config.ts
 - `app-shell`, `sidebar` (248/72 px), `topbar` (64 px), `breadcrumb`,
   `page-header`, `mobile-nav`
 - `app/dev/componentes` — catálogo vivo, 404 em produção
+- `docs/IDENTIDADE_VISUAL.md`, adaptado do equivalente na branch de referência,
+  documentando os tokens **como efetivamente copiados**, com as cinco correções
+  da §3.1 do UI Standard já aplicadas. Descreve o que existe, não o que se
+  pretende — mesma regra do `ARQUITETURA.md` (A-006).
 
 **Cinco correções obrigatórias na cópia** — `VEGAS-PLATFORM-UI-STANDARD.md` §3.1.
 São defeitos conhecidos do sistema de origem; copiar sem corrigir é replicá-los:
