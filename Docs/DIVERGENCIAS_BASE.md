@@ -1,4 +1,4 @@
-[DIVERGENCIAS_BASE.md](https://github.com/user-attachments/files/31279753/DIVERGENCIAS_BASE.md)
+[DIVERGENCIAS_BASE.md](https://github.com/user-attachments/files/31280055/DIVERGENCIAS_BASE.md)
 # DIVERGÊNCIAS COM A BASE TÉCNICA
 
 > Registro do que o documento *Base técnica reaproveitável — Vegas Card* afirma
@@ -40,18 +40,27 @@ elege fonte canônica visual. Ele não está em nenhuma das duas branches.
 `VEGAS-DESIGN-SYSTEM.md` **não é tratado como existente** enquanto não estiver
 disponível, e nenhum documento do CRM deve citá-lo como fonte.
 
-### DV-7 · Ajustes de contraste pendentes não localizáveis
+### DV-7 · Ajustes de contraste pendentes
 
-**Gravidade:** média · **Status:** absorvida
+**Gravidade:** média · **Status:** **resolvida** — localizados no UI Standard
 
-A base técnica menciona "três ajustes de contraste pendentes listados no
-documento do design system". Consequência de DV-6: a lista não pôde ser
-localizada. `IDENTIDADE_VISUAL.md` estabelece contraste AA como piso não
-negociável, mas não enumera os defeitos abertos.
+A base técnica mencionava "três ajustes de contraste pendentes listados no
+documento do design system". Estão na seção **3.1 do
+`VEGAS-PLATFORM-UI-STANDARD.md`** — são cinco, não três:
 
-**Tratamento.** O UI Standard define os ajustes de contraste (D-013). Se a lista
-específica dos três não estiver lá, tratar como auditoria de contraste a fazer na
-Sprint 0, não como correção conhecida a replicar.
+1. `Peach 600` sai de `#A85C4E` para aproximadamente `#9E5445`, garantindo
+   contraste AA sobre `Peach 50`;
+2. criar `--vg-border-field` próximo de `#8E90AD` para bordas de input, atingindo
+   3:1;
+3. label visível permanente em formulários — placeholder nunca substitui rótulo;
+4. eliminar a nomenclatura ambígua `text-ink-muted`, usando `ink-secondary` ou
+   `muted` conforme a função;
+5. sem espelhos manuais de token — havendo `brand.ts` ou JSON, criar teste de
+   sincronização com a fonte canônica.
+
+**Tratamento.** São correções a aplicar **na cópia**, na etapa 2 da Sprint 1 —
+não defeitos a replicar. O item 5 vira teste, não convenção: `tokens.css` é a
+fonte, e `brand.ts` só guarda caminho de imagem.
 
 ### DV-9 · A RLS é fronteira de papel, não de escopo
 
