@@ -15,8 +15,8 @@ O repositório tem branches em estágios diferentes:
 
 | Branch | Estado |
 | --- | --- |
-| `main` | 283 arquivos, **18 migrations** (`0001`–`0018`). Três entregas atrás |
-| `sprint-3-relatorios-e-estrutura-comercial` | 306 arquivos, **20 migrations** (`0001`–`0020`). É a referência |
+| `main` | 283 arquivos, **18 migrations** (`0001`–`0018`). Uma entrega atrás — está na Sprint 2 (v0.4.0) |
+| `sprint-3/relatorios-e-estrutura-comercial` | 306 arquivos, **20 migrations** (`0001`–`0020`). É a referência — 10 commits à frente da `main` |
 
 **Inspecionar `main` produz diagnóstico errado.** A primeira revisão do
 diagnóstico do CRM apontou seis divergências que não existiam — eram apenas
