@@ -167,6 +167,19 @@ reais.
 Pelo mesmo motivo, `src/app/page.tsx` ainda não redireciona para `/inicio`: a
 rota vive em `(app)/`, cujo layout exige perfil autenticado.
 
+## Pontos frágeis da paleta herdada
+
+**`muted` sobre o fundo da aplicação: 4,52:1.** O mínimo AA é 4,5. A margem é de
+**0,02** — isso é coincidência, não conformidade. Sobre card branco o mesmo token
+fica confortável em 4,91:1, mas qualquer escurecimento futuro de `--vg-bg`
+derruba `muted` abaixo do mínimo em toda tela que usa o fundo, e o sintoma
+aparece espalhado, longe da causa.
+
+Não foi alterado: o valor está conforme hoje, e mexer num token de texto fora do
+escopo da etapa seria decidir sozinho o que é decisão de identidade. Fica
+registrado para que, no dia em que alguém propuser escurecer o fundo, a conta
+seja refeita antes e não depois.
+
 ## Limitações herdadas dos ativos
 
 Todos os ativos derivam de um único PNG colorido enviado pela empresa; não há

@@ -123,7 +123,11 @@ Adaptar apenas: nome do sistema, texto institucional, `PUBLIC_PREFIXES`.
    setar o validado (D-019). O `delete` precede o `set`.
 
 *Aceite:* login, troca obrigatória de senha, bloqueio de usuário desativado em
-meio a sessão, e o teste de header forjado de `RLS_PERMISSOES.md` §6.3.
+meio a sessão, e o teste de header forjado de `RLS_PERMISSOES.md` §6.3. Mais:
+**eliminar as 9 ocorrências restantes de `text-ink-muted` nos componentes de
+shell** — `ink.muted` já saiu do Tailwind na etapa 2, então elas quebram o build
+na chegada. `ink-secondary` para prosa subordinada, `muted` para metadado e
+adorno, como na etapa 2.
 
 ## 5 · Sequência própria de migrations
 
