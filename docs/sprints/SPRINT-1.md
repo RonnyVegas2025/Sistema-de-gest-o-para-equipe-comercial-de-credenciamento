@@ -46,10 +46,11 @@ são scaffolding descartável: crescem na etapa 2, quando o layout recebe
 ## 2 · Next.js, Tailwind, tokens e shell Vegas
 
 - `tokens.css`, `tailwind.config.ts`, `brand.ts`, `public/brand/*`
-- 28 componentes de `src/components/ui/` (lista em `DIAGNOSTICO_SPRINT_0.md` §4)
-- `app-shell`, `sidebar` (248/72 px), `topbar` (64 px), `breadcrumb`,
-  `page-header`, `mobile-nav`
-- `app/dev/componentes` — catálogo vivo, 404 em produção
+- 28 componentes de `src/components/ui/` — a lista é o próprio
+  `src/components/ui/` da branch de referência
+- `breadcrumb` e `page-header` (ambos vivem em `ui/` e não dependem de sessão)
+- `app/dev/componentes` — catálogo vivo, 404 em produção, com gate de ambiente
+  fail-closed
 - `docs/IDENTIDADE_VISUAL.md`, adaptado do equivalente na branch de referência,
   documentando os tokens **como efetivamente copiados**, com as cinco correções
   da §3.1 do UI Standard já aplicadas. Descreve o que existe, não o que se
@@ -65,16 +66,25 @@ São defeitos conhecidos do sistema de origem; copiar sem corrigir é replicá-l
 5. sem espelho manual de token — `tokens.css` é a fonte, e a sincronia com
    `brand.ts`/JSON vira **teste**, não convenção
 
-**Auditoria de alvo touch de 44 px** (UI Standard §19) nos componentes copiados:
+**Auditoria de alvo touch** (UI Standard §19) nos componentes copiados:
 `button`, `input`, `select`, `checkbox` e linhas de tabela. O sistema de origem
 foi construído para desktop administrativo; o CRM roda em tablet no campo.
 Antecipada da Sprint 6 para cá — corrigir na cópia custa uma fração de corrigir
-depois em todas as telas.
+depois em todas as telas. O alvo é **responsivo**: 44 px na base, densidade
+compacta a partir de `lg:` (D-027).
 
 Não trazer `costs/cost-rule-card` nem páginas de negócio de Agregados.
 
+**O shell não entra nesta etapa.** `app-shell`, `shell-chrome`, `sidebar`,
+`sidebar-nav`, `topbar`, `mobile-nav` e `user-menu` dependem de
+`@/lib/auth/session`, `@/config/navigation` e `@/types/database` — que nascem nas
+etapas 4 e 6. Copiá-los aqui exigiria stubs, e stub criado para destravar etapa
+sobrevive e apodrece. Migram para a etapa 4, junto com `navigation.ts`.
+
 *Aceite:* catálogo de componentes renderiza; nenhum hexadecimal fora de
-`tokens.css` (lint); as cinco correções aplicadas; contraste AA verificado.
+`tokens.css`, salvo o espelho de `brand.ts` coberto por teste; as cinco correções
+aplicadas; contraste AA verificado por cálculo; `docs/IDENTIDADE_VISUAL.md`
+descrevendo o que ficou.
 
 ## 3 · Supabase e ambientes
 
@@ -92,6 +102,16 @@ produz 404 com build limpo e log de runtime vazio.
 Copiar: Edge Function `admin-create-user`, `lib/supabase/{client,server,middleware}`,
 `lib/auth/session.ts`, `lib/auth/profile-header.ts`, `middleware.ts`, telas de
 login, esqueci-senha, nova-senha e trocar-senha.
+
+**Vindo da etapa 2**, agora que as dependências existem:
+
+- o shell — `app-shell`, `shell-chrome`, `sidebar` (248/72 px), `sidebar-nav`,
+  `topbar` (64 px), `mobile-nav`, `user-menu`;
+- `src/config/navigation.ts`, com as chaves de módulo desta sprint;
+- `src/app/page.tsx` passa a redirecionar para `/inicio`, que só existe sob o
+  layout autenticado de `(app)`;
+- a segunda barreira de `/dev` — sessão mais perfil administrador — sobre o gate
+  de ambiente que a etapa 2 deixou pronto.
 
 Adaptar apenas: nome do sistema, texto institucional, `PUBLIC_PREFIXES`.
 

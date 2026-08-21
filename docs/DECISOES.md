@@ -10,7 +10,7 @@
 | Sistema | CRM Comercial de Credenciamento Vegas |
 | Base técnica | Painel ADM de Produtos Agregados, branch `sprint-3/relatorios-e-estrutura-comercial` |
 | Estado | Sprint 0 — documentação aprovada, implementação não iniciada |
-| Decisões fechadas | D-001 a D-026 |
+| Decisões fechadas | D-001 a D-027 |
 
 ---
 
@@ -699,6 +699,51 @@ mensagem correspondente mapeada por nome:
 O mapeamento é **por nome de constraint**, não por texto da mensagem do
 Postgres — o texto muda entre versões, o nome não. Constraint sem tradução cai
 em mensagem genérica e vira item de correção, nunca motivo para relaxar a regra.
+
+---
+
+## D-027 — Alvo de toque responsivo
+
+**Contexto.** A biblioteca copiada foi dimensionada para desktop administrativo:
+`button` em 32/40 px, `input` e `select` em 40 px, `checkbox` em 16 px, célula de
+tabela com `py-2`. Nenhum controle atinge 44 px. O CRM roda em **tablet no
+campo**, e alvo pequeno em tela de toque é erro de operação, não de estética.
+
+Ao aplicar a regra, as fontes divergem no alcance:
+
+- O `VEGAS-PLATFORM-UI-STANDARD.md` qualifica três vezes — §12 "alvos de toque
+  mínimos de 44 px **no mobile**", §19 "Mobile em campo → botões 44 px", §20
+  "tamanho de toque mínimo de 44 px **no mobile**";
+- a mesma §19 lista **densidade e produtividade** como prioridade do desktop
+  administrativo — sidebar, tabelas, filtros e múltiplas colunas;
+- o `CLAUDE.md` afirmava sem qualificar: "alvo touch mínimo de 44 px".
+
+**Decisão.** Alvo de toque **responsivo**: 44 px na base, densidade compacta a
+partir de `lg:`.
+
+```
+button   h-11 lg:h-8  (sm)   ·   h-11 lg:h-10 (md)
+campos   h-11 lg:h-10
+tabela   py-3 lg:py-2
+```
+
+As duas exigências da §19 são reais e conflitantes: 44 px fixo em tudo atenderia
+o tablet e custaria densidade em toda tela de desktop, contra a própria §19. O
+responsivo atende as duas linhas da tabela sem escolher entre elas.
+
+**Checkbox.** O quadrado permanece em 16 px — inflá-lo para 44 px destoaria de
+qualquer formulário e não é o que a regra pede. A área de toque vem do **padding
+do rótulo** (`min-h-11 py-3`, revertido em `lg:`). O alvo clicável cresce; o
+desenho não muda.
+
+**Divergência corrigida na origem.** O `CLAUDE.md` é resumo; o UI Standard é
+fonte normativa. Quando resumo e fonte divergem, a fonte vence — e o resumo é
+corrigido, não mantido. A linha do `CLAUDE.md` passou a "alvo touch mínimo de
+44 px em telas de toque; densidade compacta a partir de `lg:`".
+
+**Consequências.** Todo controle novo nasce com o par base/`lg:`. Componente que
+declare só a altura compacta reprova a auditoria de toque. `conformidade.test.tsx`
+trava o padrão em `button`, `input` e `select`.
 
 ---
 

@@ -138,8 +138,9 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
 - Gradiente Vegas é assinatura discreta — linha superior, item ativo, progresso.
   Nunca fundo de card, botão primário, KPI ou grande área colorida.
 - Outfit para títulos e KPIs; Inter para formulários, tabelas e navegação.
-- Alvo touch mínimo de 44 px. Label sempre visível; placeholder não substitui
-  label. Não empilhar modais.
+- Alvo touch mínimo de 44 px em telas de toque; densidade compacta a partir de
+  `lg:` (D-027). Label sempre visível; placeholder não substitui label. Não
+  empilhar modais.
 
 **Dados**
 

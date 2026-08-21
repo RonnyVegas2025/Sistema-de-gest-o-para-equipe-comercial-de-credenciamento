@@ -1,6 +1,7 @@
 /**
  * Raiz da aplicação. Nasce mínima na etapa 1 e vira o redirect para `/inicio`
- * na etapa 2, quando o shell Vegas e a rota interna passam a existir.
+ * na etapa 4, junto com o shell Vegas e a barreira de autenticação que
+ * protege a rota interna.
  */
 export default function Home() {
   return (
