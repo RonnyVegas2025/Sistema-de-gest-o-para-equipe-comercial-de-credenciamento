@@ -1,6 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/eslintrc",
   "root": true,
+  "ignorePatterns": ["supabase/functions/**"],
   "extends": [
     "next/core-web-vitals",
     "next/typescript",
@@ -15,13 +16,23 @@
     "@typescript-eslint/no-explicit-any": "error",
     "@typescript-eslint/no-unused-vars": [
       "error",
-      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
     ],
     "@typescript-eslint/consistent-type-imports": [
       "error",
-      { "prefer": "type-imports" }
+      {
+        "prefer": "type-imports"
+      }
     ],
-    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "no-console": [
+      "warn",
+      {
+        "allow": ["warn", "error"]
+      }
+    ],
     "no-restricted-imports": [
       "error",
       {
@@ -65,11 +76,15 @@
         "src/app/**/route.ts",
         "scripts/**/*"
       ],
-      "rules": { "no-restricted-imports": "off" }
+      "rules": {
+        "no-restricted-imports": "off"
+      }
     },
     {
       "files": ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "e2e/**/*"],
-      "rules": { "@typescript-eslint/no-explicit-any": "off" }
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off"
+      }
     }
   ]
 }

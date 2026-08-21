@@ -10,7 +10,7 @@
 | Sistema | CRM Comercial de Credenciamento Vegas |
 | Base técnica | Painel ADM de Produtos Agregados, branch `sprint-3/relatorios-e-estrutura-comercial` |
 | Estado | Sprint 0 — documentação aprovada, implementação não iniciada |
-| Decisões fechadas | D-001 a D-028 |
+| Decisões fechadas | D-001 a D-030 |
 
 ---
 
@@ -779,6 +779,72 @@ o CI sem a ferramenta — `db:lint` nunca poderia rodar lá.
 pelo `node_modules/.bin` sem `npx` remoto. `supabase start` continua exigindo
 Docker e segue opcional (D-001: o desenvolvimento pode apontar direto para o
 projeto hospedado).
+
+---
+
+## D-029 — Saneamento de `x-user-profile` no topo do middleware
+
+**Contexto.** D-019 estabelece que o middleware remove qualquer `x-user-profile`
+vindo do cliente **antes** de setar o validado, e chama a verificação de
+obrigatória. A implementação do sistema de origem faz o `delete` **dentro de um
+ramo só** — o de rota protegida com sessão. Os demais caminhos retornam antes:
+
+| Caminho | Header do cliente |
+| --- | --- |
+| sem sessão, rota pública | **passa** |
+| com sessão, rota pública | **passa** |
+| com sessão, rota protegida | removido |
+
+E `getSessionProfile()` confia no header sem condição quando ele existe — só cai
+para o `getUser` real quando o header falta.
+
+`/dev` é rota pública no middleware, e o layout do segmento exige perfil
+`administrador`. Na origem, portanto, uma requisição a `/dev` com header forjado
+atravessa o gate de administrador. O estrago lá é pequeno — o catálogo não
+carrega dado —, mas é o caminho de escalonamento que D-019 nomeia, e o padrão
+seria herdado por qualquer rota pública futura que leia perfil.
+
+**Decisão.** O `delete` sobe para o **topo** de `src/middleware.ts` e vale para
+**toda** requisição, antes de qualquer decisão de rota. Os headers saneados são
+passados a `updateSession()`, que constrói com eles todo `NextResponse.next` —
+inclusive os dos caminhos que retornam cedo. Nenhum ramo devolve header vindo do
+cliente.
+
+O saneamento acontece **antes** de o cliente Supabase existir, então não
+interfere na regra de não haver lógica entre `createServerClient` e `getUser()`
+— de que depende a renovação do token.
+
+**Verificação.** `src/middleware.test.ts` nasce no mesmo commit que o código, com
+os casos de rota protegida, **rota pública** e ausência de sessão. Foi validado
+por mutação: revertido o middleware ao padrão da origem, três testes reprovam,
+incluindo o de rota pública. A verificação obrigatória de D-019 **nunca existiu
+na origem** — nenhum dos 29 arquivos de teste da branch de referência cobre §6.3.
+
+**Consequência.** O gate de administrador de `/dev` passa a ser real mesmo sendo
+`/dev` rota pública no middleware. Rota pública nova que leia perfil nasce
+protegida por construção, não por lembrança.
+
+---
+
+## D-030 — Sem `serverEnv()`: a service role não é lida pelo runtime do Next
+
+**Contexto.** O `src/lib/env.ts` da origem expõe `publicEnv` e um `serverEnv()`
+que valida `SUPABASE_SERVICE_ROLE_KEY`. **Nenhum arquivo o chama** — nem na
+origem, nem aqui.
+
+**Decisão.** `serverEnv()` e o schema de servidor não são replicados. `env.ts`
+expõe apenas `publicEnv`.
+
+**Motivo.** No CRM a service role vive num único lugar: os secrets da Edge
+Function, onde `admin-create-user` a lê. Um schema no runtime do Next que a
+exigisse seria código morto convidando alguém a definir a variável na Vercel
+para "o schema parar de reclamar" — colocando a chave exatamente onde o desenho
+diz que ela não deve estar.
+
+**Consequência verificável.** Depois da remoção, a string
+`SUPABASE_SERVICE_ROLE_KEY` não aparece em `.next/static` **nem em
+`.next/server`**. A etapa do CI que varre o bundle client continua valendo como
+rede de segurança; o desenho é a chave nunca chegar perto.
 
 ---
 

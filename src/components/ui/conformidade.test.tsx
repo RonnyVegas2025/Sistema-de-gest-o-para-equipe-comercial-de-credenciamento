@@ -10,10 +10,21 @@ import { Input } from './input'
  * Sem isto elas seriam convenção — e convenção não sobrevive à próxima cópia.
  */
 
-const UI_DIR = join(process.cwd(), 'src/components/ui')
-const sources = readdirSync(UI_DIR)
-  .filter((f) => f.endsWith('.tsx') && !f.includes('.test.'))
-  .map((f) => [f, readFileSync(join(UI_DIR, f), 'utf8')] as const)
+// Varre ui/ E layout/: a correção 4 vale para a biblioteca inteira, e o shell
+// chegou na etapa 4 trazendo as 9 ocorrências que faltavam.
+const DIRS = ['src/components/ui', 'src/components/layout']
+const sources = DIRS.flatMap((dir) => {
+  const abs = join(process.cwd(), dir)
+  return readdirSync(abs)
+    .filter((f) => f.endsWith('.tsx') && !f.includes('.test.'))
+    .map(
+      (f) =>
+        [
+          `${dir.split('/').pop()}/${f}`,
+          readFileSync(join(abs, f), 'utf8'),
+        ] as const,
+    )
+})
 
 describe('rótulo sempre visível (§3.1, §12)', () => {
   it('FormField renderiza o rótulo associado ao controle', () => {
@@ -56,16 +67,16 @@ describe('nomenclatura de texto (§3.1)', () => {
 
 describe('alvo de toque responsivo (D-027)', () => {
   it.each([
-    ['button.tsx', 'h-11'],
-    ['input.tsx', 'h-11'],
-    ['select.tsx', 'h-11'],
+    ['ui/button.tsx', 'h-11'],
+    ['ui/input.tsx', 'h-11'],
+    ['ui/select.tsx', 'h-11'],
   ])('%s tem 44 px na base', (file, expected) => {
     const source = sources.find(([name]) => name === file)?.[1] ?? ''
     expect(source).toContain(expected)
   })
 
   it('a densidade compacta é reintroduzida a partir de lg', () => {
-    const button = sources.find(([name]) => name === 'button.tsx')?.[1] ?? ''
+    const button = sources.find(([name]) => name === 'ui/button.tsx')?.[1] ?? ''
     expect(button).toContain('lg:h-10')
   })
 })

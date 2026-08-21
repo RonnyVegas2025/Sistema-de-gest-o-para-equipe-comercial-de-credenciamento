@@ -113,6 +113,48 @@ Todos existem na branch de referência:
 
 ## 3. Dívidas conhecidas do sistema de origem — não replicar
 
+### `delete` do `x-user-profile` aplicado em um ramo só
+
+O `src/middleware.ts` da origem remove o header forjado **apenas** no ramo de
+rota protegida com sessão. Rota pública — com ou sem sessão — devolve a resposta
+sem sanear, e `getSessionProfile()` confia no header sem condição quando ele
+existe.
+
+`/dev` está em `PUBLIC_PREFIXES` e o layout do segmento exige `administrador`.
+Consequência: em preview, uma requisição a `/dev` com `x-user-profile` forjado
+atravessa o gate de administrador. O estrago é pequeno lá — o catálogo não
+carrega dado — mas é o caminho de escalonamento que D-019 nomeia.
+
+**No CRM:** o `delete` fica no topo, vale para toda requisição antes de qualquer
+decisão de rota, e os headers saneados alimentam todo `NextResponse.next`
+(D-029).
+
+### A verificação obrigatória de D-019 nunca foi escrita
+
+`RLS_PERMISSOES.md` §6.3 exige teste de header forjado, e D-019 chama a
+verificação de obrigatória. Na branch de referência, `x-user-profile` aparece em
+três arquivos de código e em **nenhum** dos 29 arquivos de teste.
+
+É o caso exemplar do risco que o próprio documento descreve: sem o `delete`, ou
+com ele em ramo errado, nada quebra visivelmente — só abre a porta.
+
+**No CRM:** `src/middleware.test.ts` nasce no mesmo commit que o middleware, e
+foi validado por mutação — revertido o código ao padrão da origem, três testes
+reprovam.
+
+> **Vale avisar o time do Painel.** Não é urgente (o `/dev` de lá não expõe
+> dado), mas eles devem saber, porque o padrão vale para qualquer rota pública
+> futura que leia perfil.
+
+### `serverEnv()` é código morto que pede a service role
+
+`src/lib/env.ts` da origem valida `SUPABASE_SERVICE_ROLE_KEY` num `serverEnv()`
+que **nenhum arquivo chama**. Schema no runtime do Next exigindo a chave convida
+a defini-la na Vercel para o schema parar de reclamar.
+
+**No CRM:** não replicado (D-030). A chave vive só nos secrets da Edge Function,
+e a string não aparece em `.next/server` nem em `.next/static`.
+
 ### `managers.team_id` é vestigial
 
 DE-040 registra: a coluna não é lida por nenhuma regra — nem painel, nem
