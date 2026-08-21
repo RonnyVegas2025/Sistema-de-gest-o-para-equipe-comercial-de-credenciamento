@@ -7,6 +7,8 @@
 # O projeto é novo e independente do Painel ADM (D-001): sem schema
 # compartilhado, sem Auth compartilhada.
 
+# Nome local do stack. A referência do projeto hospedado
+# (oywwcwkkwsrgzgkegifn) fica em SUPABASE_PROJECT_REF, no .env.local.
 project_id = "crm-credenciamento"
 
 [api]
@@ -21,15 +23,9 @@ max_rows = 1000
 [db]
 port = 54322
 shadow_port = 54320
-# A CONFIRMAR — valor não verificado.
-#
-# 17 é apenas o padrão do CLI 2.115.0, não a versão observada no projeto
-# hospedado, que ainda não existe. Conferir em Project Settings > Database >
-# Postgres version e corrigir aqui antes da primeira migration (etapa 6).
-#
-# Divergir faz a migration passar no local e falhar no deploy — sintoma que não
-# aponta para a causa. Não tratar como verificado enquanto este comentário
-# estiver aqui.
+# CONFIRMADO contra o projeto hospedado: Postgres 17.6.1.155, região sa-east-1
+# (South America, São Paulo). Acompanha o major do projeto — divergir faz a
+# migration passar no local e falhar no deploy.
 major_version = 17
 
 [db.migrations]
