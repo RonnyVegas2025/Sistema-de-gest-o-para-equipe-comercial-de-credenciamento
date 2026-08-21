@@ -155,6 +155,20 @@ a defini-la na Vercel para o schema parar de reclamar.
 **No CRM:** não replicado (D-030). A chave vive só nos secrets da Edge Function,
 e a string não aparece em `.next/server` nem em `.next/static`.
 
+### Sem `ignorePatterns` para `supabase/functions/**`
+
+A Edge Function é código Deno — importa por URL, tem tipos próprios e está fora
+do `tsconfig.json` (`exclude: ["node_modules", "supabase/functions"]`). O ESLint
+tipado não consegue analisá-la.
+
+`next lint` a pula, então nada aparece no CI nem no `npm run verify`. Mas o
+`lint-staged` do `pre-commit` roda `eslint --fix` **direto nos arquivos staged**
+e a alcança — o commit falha com erro de parsing, e só naquele arquivo, e só na
+hora de commitar. A origem não tem `.eslintignore` nem `ignorePatterns`: a
+armadilha está lá, latente, esperando alguém editar a função.
+
+**No CRM:** `.eslintrc.json` declara `ignorePatterns: ["supabase/functions/**"]`.
+
 ### `managers.team_id` é vestigial
 
 DE-040 registra: a coluna não é lida por nenhuma regra — nem painel, nem

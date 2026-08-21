@@ -95,6 +95,10 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
 
 **Segurança**
 
+- **Teste que protege fronteira de segurança é validado por mutação.** Escrever
+  o teste, quebrar o código de propósito, confirmar que reprova, restaurar.
+  Sem isso o teste é uma afirmação, não uma garantia — e teste de segurança que
+  passa por vacuidade é pior que teste nenhum, porque cria confiança.
 - A RLS é a fronteira real. Menu e guarda de rota são conveniência.
 - Nunca relaxar RLS para fazer uma tela funcionar.
 - Service role apenas em Edge Function. Nunca no frontend, nunca com prefixo
