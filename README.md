@@ -110,23 +110,34 @@ compartilhado, sem Auth compartilhada. Região `sa-east-1`, a mesma da Vercel
 
 Configuração local e do CLI em `supabase/config.toml`.
 
-### Uma migration por vez
+### Uma migration por vez, pelo SQL Editor
 
 Regra permanente (D-021). Não é preferência de estilo: quando quatro alterações
 sobem juntas e a quarta falha, ninguém sabe qual delas causou o quê.
 
-```bash
-npm run db:link          # uma vez, vincula ao projeto hospedado
-npm run db:new nome_da_migration
-# ... escrever o SQL, com a RLS na MESMA migration (DE-002)
-npm run db:push:dry      # prever o que vai subir
-npm run db:push          # aplicar
-npm run db:status        # conferir que subiu
-npm run db:types         # regenerar src/types/database.ts
-npm run verify           # o typecheck acusa o que o tipo novo quebrou
+As migrations são aplicadas **colando o arquivo no SQL Editor do painel**
+(D-031). `db push` não é usado, e os scripts correspondentes não existem no
+`package.json` de propósito.
+
+```
+1. o arquivo entra em supabase/migrations/, em ordem numérica
+2. cole o conteúdo no SQL Editor e execute
+3. execute o script correspondente de supabase/checks/ — somente leitura
+4. toda linha da saída precisa sair com status OK
+5. só então a próxima migration
 ```
 
-Só então a próxima.
+**O banco não conhece o histórico de migrations.** A tabela que o CLI usa para
+isso permanece vazia, então `supabase migration list` reportaria "nada aplicado"
+mesmo com o banco inteiro construído. `supabase/migrations/` é a **única** fonte
+da ordem aplicada. Se um dia o projeto migrar para o CLI,
+`supabase migration repair --status applied <versão>` reconstrói o histórico sem
+reexecutar nada.
+
+**O script de verificação é o que substitui a confirmação do `db push`.** Ele lê
+o catálogo do Postgres — colunas, tipos, defaults, constraints, índices,
+`security definer`, `search_path`, triggers, RLS e policies — e compara com o
+modelo. "Apliquei" vira "apliquei e aqui está a prova".
 
 **Migration aplicada nunca é editada.** Correção é migration nova. As demais
 regras — `drop policy` sempre em transação, `add constraint` guardado por bloco

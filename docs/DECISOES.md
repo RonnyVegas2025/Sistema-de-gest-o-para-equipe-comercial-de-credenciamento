@@ -10,7 +10,7 @@
 | Sistema | CRM Comercial de Credenciamento Vegas |
 | Base técnica | Painel ADM de Produtos Agregados, branch `sprint-3/relatorios-e-estrutura-comercial` |
 | Estado | Sprint 0 — documentação aprovada, implementação não iniciada |
-| Decisões fechadas | D-001 a D-030 |
+| Decisões fechadas | D-001 a D-031 |
 
 ---
 
@@ -845,6 +845,43 @@ diz que ela não deve estar.
 `SUPABASE_SERVICE_ROLE_KEY` não aparece em `.next/static` **nem em
 `.next/server`**. A etapa do CI que varre o bundle client continua valendo como
 rede de segurança; o desenho é a chave nunca chegar perto.
+
+---
+
+## D-031 — Migrations aplicadas pelo SQL Editor
+
+**Contexto.** Quem opera o projeto trabalha pelo GitHub web e pelo painel do
+Supabase: não há repositório clonado nem CLI. O agente que escreve o SQL não
+alcança o Supabase — a política de rede do ambiente recusa a conexão antes de
+qualquer autenticação. Nenhum dos dois lados pode rodar `supabase db push`.
+
+**Decisão.** As migrations são aplicadas **colando o arquivo no SQL Editor** do
+painel. `db push` não é usado — nunca, nem no futuro próximo.
+
+**Consequência, escrita porque é a parte que morde.** O banco **não conhece o
+histórico de migrations**. A tabela `supabase_migrations.schema_migrations`,
+que o CLI usa como registro do que já foi aplicado, permanece vazia. Portanto:
+
+- **O repositório é a única fonte da ordem aplicada.** `supabase/migrations/` em
+  ordem numérica é o registro; não existe segunda fonte para conferir.
+- `supabase migration list --linked` reportaria "nada aplicado" mesmo com o banco
+  inteiro construído. É informação enganosa, não incompleta.
+- Um `db push` futuro tentaria reaplicar **tudo desde a 0001**.
+
+**Migração para CLI, se um dia acontecer.** `supabase migration repair
+--status applied <versão>` marca cada versão como aplicada sem reexecutá-la,
+reconstruindo o histórico a partir do repositório. É o caminho previsto; não
+improvisar outro.
+
+**Scripts removidos do `package.json`.** `db:push`, `db:push:dry` e `db:status`
+saíram. Atalho que contradiz a decisão é convite a usá-lo por engano, e
+`db:status` seria pior que inútil: reportaria banco vazio com convicção.
+
+**O que substitui a confirmação do `db push`.** Cada migration vem com um script
+de verificação em `supabase/checks/`, somente leitura, que lê o catálogo do
+Postgres e compara com o modelo — colunas, tipos, defaults, constraints, índices,
+`security definer`, `search_path`, triggers, RLS e policies. "Apliquei" vira
+"apliquei e aqui está a prova".
 
 ---
 

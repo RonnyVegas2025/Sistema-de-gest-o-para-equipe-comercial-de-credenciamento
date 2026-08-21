@@ -6,7 +6,7 @@
 > alicerce. Depois que isso estiver certo, as telas comerciais andam rápido.
 > Errado, contamina tudo que vier depois.
 
-Fontes canônicas: `DECISOES.md` (D-001 a D-030) · `MODELO_DADOS.md` ·
+Fontes canônicas: `DECISOES.md` (D-001 a D-031) · `MODELO_DADOS.md` ·
 `RLS_PERMISSOES.md` · `DIVERGENCIAS_BASE.md`.
 
 **Repositório-base de referência:** branch
@@ -133,6 +133,20 @@ adorno, como na etapa 2.
 
 O CRM inicia sua numeração em `0001`. Não copiar migrations em bloco.
 
+**Como as migrations são aplicadas (D-031).** Pelo **SQL Editor do painel**, não
+por `db push`. O banco não guarda histórico; `supabase/migrations/` é a única
+fonte da ordem aplicada. Cada migration vem acompanhada de um script de
+verificação em `supabase/checks/`, somente leitura, cuja saída é o que prova que
+a aplicação ficou correta.
+
+Ciclo por migration:
+
+```
+agente escreve e commita  →  operador cola no SQL Editor  →  cola a saída
+  →  operador roda o script de verificação  →  cola a saída
+  →  agente valida contra MODELO_DADOS.md  →  próxima
+```
+
 Regras permanentes (D-021): **uma migration por vez**, aplicada e validada antes
 da próxima. Não agrupar para ganhar tempo — o tempo economizado ali é cobrado
 com juros quando a falha aparece e não se sabe qual das quatro alterações a
@@ -163,6 +177,18 @@ pode não ter conta de acesso.
 **Sem `sellers.manager_id`** também: o gestor do vendedor é o gestor atual da
 equipe (`seller.team_id → team.current_manager_id`). Coluna própria divergiria na
 primeira troca de gestor.
+
+**Ordem de habilitação, confirmada.** Depois da `0001` e antes da etapa 9:
+
+```
+0001 aplicada  →  implantar a Edge Function admin-create-user
+   →  criar os cinco usuários reais do gate de fechamento
+   →  etapa 9
+```
+
+A Edge Function escreve em `profiles`, então não funciona antes da `0001`. E os
+cinco usuários do gate nascem por ela — não há outro caminho de criação, já que
+o cadastro público está desligado (D-009). A Vercel fica para depois da etapa 9.
 
 *Aceite:* CRUD das quatro entidades; ficha do gestor lista **todas** as equipes
 que ele gerencia, não uma equipe de pertencimento (bug DE-040 da origem).
