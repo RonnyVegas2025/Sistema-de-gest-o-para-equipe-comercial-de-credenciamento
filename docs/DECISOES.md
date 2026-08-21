@@ -10,7 +10,7 @@
 | Sistema | CRM Comercial de Credenciamento Vegas |
 | Base técnica | Painel ADM de Produtos Agregados, branch `sprint-3/relatorios-e-estrutura-comercial` |
 | Estado | Sprint 0 — documentação aprovada, implementação não iniciada |
-| Decisões fechadas | D-001 a D-027 |
+| Decisões fechadas | D-001 a D-028 |
 
 ---
 
@@ -744,6 +744,41 @@ corrigido, não mantido. A linha do `CLAUDE.md` passou a "alvo touch mínimo de
 **Consequências.** Todo controle novo nasce com o par base/`lg:`. Componente que
 declare só a altura compacta reprova a auditoria de toque. `conformidade.test.tsx`
 trava o padrão em `button`, `input` e `select`.
+
+---
+
+## D-028 — CLI do Supabase fixado no projeto
+
+**Contexto.** Os scripts de banco herdados da origem (`db:types`, `db:reset`)
+assumiam um `supabase` instalado globalmente na máquina do desenvolvedor. O
+repositório não declarava a ferramenta em lugar nenhum: quem clonasse sem o CLI
+global veria os scripts falharem, e quem tivesse uma versão diferente rodaria
+outra ferramenta com o mesmo nome.
+
+**Decisão.** `supabase` entra como **devDependency com versão exata** —
+`"supabase": "2.115.0"`, sem `^`. Fica no `package-lock.json` e é a mesma
+ferramenta em qualquer máquina e no CI.
+
+**Motivo.** Versão no lock significa mesmo comportamento em toda máquina e no
+CI. Migration que passa numa máquina e falha noutra por diferença de CLI é
+exatamente a classe de problema que **D-021** existe para evitar — não faz
+sentido disciplinar a ordem das migrations e deixar flutuando a ferramenta que
+as aplica. Os ~50 MB do binário são baratos perto de um diagnóstico perdido
+nisso.
+
+**Sem intervalo de versão.** `^` permitiria que uma minor nova entrasse num
+`npm ci` e mudasse a geração de tipos ou o comportamento de `db push` sem
+ninguém ter decidido. Atualização de CLI passa a ser mudança explícita, com
+teste, como qualquer outra dependência.
+
+**Alternativa descartada.** Instalação global documentada no README: não
+acrescenta pacote ao repositório, mas devolve a variação entre máquinas e deixa
+o CI sem a ferramenta — `db:lint` nunca poderia rodar lá.
+
+**Consequências.** `npm ci` passa a baixar o binário. Os scripts `db:*` resolvem
+pelo `node_modules/.bin` sem `npx` remoto. `supabase start` continua exigindo
+Docker e segue opcional (D-001: o desenvolvimento pode apontar direto para o
+projeto hospedado).
 
 ---
 

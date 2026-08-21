@@ -21,8 +21,15 @@ max_rows = 1000
 [db]
 port = 54322
 shadow_port = 54320
-# Acompanha a versão do projeto hospedado. Divergir daqui faz a migration passar
-# local e falhar no deploy.
+# A CONFIRMAR — valor não verificado.
+#
+# 17 é apenas o padrão do CLI 2.115.0, não a versão observada no projeto
+# hospedado, que ainda não existe. Conferir em Project Settings > Database >
+# Postgres version e corrigir aqui antes da primeira migration (etapa 6).
+#
+# Divergir faz a migration passar no local e falhar no deploy — sintoma que não
+# aponta para a causa. Não tratar como verificado enquanto este comentário
+# estiver aqui.
 major_version = 17
 
 [db.migrations]

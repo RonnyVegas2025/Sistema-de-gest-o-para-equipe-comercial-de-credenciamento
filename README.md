@@ -136,6 +136,9 @@ regras — `drop policy` sempre em transação, `add constraint` guardado por bl
 Cada RLS ganha espelho em `supabase/policies/<tabela>.sql`, para o estado das
 policies ser legível sem abrir o painel.
 
+O CLI do Supabase é **devDependency com versão exata** (D-028) — `npm install`
+já o traz, não é preciso instalar nada globalmente.
+
 ### Ambiente local
 
 `npm run db:start` sobe o Supabase local e **exige Docker**. É opcional: o

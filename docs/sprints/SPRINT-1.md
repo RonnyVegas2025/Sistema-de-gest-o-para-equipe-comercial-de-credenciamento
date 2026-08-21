@@ -6,7 +6,7 @@
 > alicerce. Depois que isso estiver certo, as telas comerciais andam rápido.
 > Errado, contamina tudo que vier depois.
 
-Fontes canônicas: `DECISOES.md` (D-001 a D-026) · `MODELO_DADOS.md` ·
+Fontes canônicas: `DECISOES.md` (D-001 a D-028) · `MODELO_DADOS.md` ·
 `RLS_PERMISSOES.md` · `DIVERGENCIAS_BASE.md`.
 
 **Repositório-base de referência:** branch
