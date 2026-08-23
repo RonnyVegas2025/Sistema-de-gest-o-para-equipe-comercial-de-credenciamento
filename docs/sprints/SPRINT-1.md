@@ -214,6 +214,18 @@ Spec própria de estrutura comercial, adaptada de `import/sellers.ts`:
 
 Prévia obrigatória. Nada gravado antes da confirmação.
 
+**Sem tela nesta sprint.** A tela de importação de estrutura comercial entra na
+**Sprint 3**, junto com as demais telas de importação. O ponto de revisão após a
+etapa 9 descreve o estado como "ainda não existe nenhuma tela comercial", e uma
+tela de importação é uma tela comercial — preservá-lo vale mais do que antecipar
+a interface. Até lá a carga roda por chamada direta das Server Actions, por quem
+opera o projeto, não pelo usuário final.
+
+**Quatro specs, num arquivo, nesta ordem:** `directors → managers → teams →
+sellers`. Cada uma referencia a anterior, e o `resolve` não cria referência
+ausente — importar consultores antes das equipes produz erro de linha, nunca
+equipe inventada.
+
 *Aceite:* importar o mesmo arquivo duas vezes não duplica nada; renomear uma
 pessoa na origem e reimportar **atualiza**, não cria.
 
