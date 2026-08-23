@@ -11,7 +11,8 @@
  * forma abaixo foi escrita a partir da saída desses scripts contra o banco
  * real, não a partir do modelo em prosa.
  *
- * Estado verificado: migrations 0001 e 0002 aplicadas; 27 + 7 verificações OK.
+ * Estado verificado: migrations 0001 a 0007 aplicadas e verificadas contra o banco
+ * real. `source_ref` entra nas quatro entidades pela 0007.
  *
  * REGRA AO MEXER: este arquivo só muda depois de uma migration aplicada E
  * verificada, refletindo a saída do script. Nunca "adiantar" uma coluna que o
@@ -74,6 +75,256 @@ export type Database = {
           },
         ]
       }
+      directors: {
+        Row: {
+          id: string
+          full_name: string
+          email: string | null
+          profile_id: string | null
+          status: Database['public']['Enums']['entity_status']
+          active_from: string | null
+          active_to: string | null
+          source_ref: string | null
+          created_at: string
+          updated_at: string
+          created_by: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          full_name: string
+          email?: string | null
+          profile_id?: string | null
+          status?: Database['public']['Enums']['entity_status']
+          active_from?: string | null
+          active_to?: string | null
+          source_ref?: string | null
+          created_at?: string
+          updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          full_name?: string
+          email?: string | null
+          profile_id?: string | null
+          status?: Database['public']['Enums']['entity_status']
+          active_from?: string | null
+          active_to?: string | null
+          source_ref?: string | null
+          created_at?: string
+          updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'directors_profile_id_fkey'
+            columns: ['profile_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      managers: {
+        Row: {
+          id: string
+          full_name: string
+          email: string | null
+          role_title: string | null
+          mobile: string | null
+          phone: string | null
+          director_id: string | null
+          profile_id: string | null
+          status: Database['public']['Enums']['entity_status']
+          active_from: string | null
+          active_to: string | null
+          source_ref: string | null
+          created_at: string
+          updated_at: string
+          created_by: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          full_name: string
+          email?: string | null
+          role_title?: string | null
+          mobile?: string | null
+          phone?: string | null
+          director_id?: string | null
+          profile_id?: string | null
+          status?: Database['public']['Enums']['entity_status']
+          active_from?: string | null
+          active_to?: string | null
+          source_ref?: string | null
+          created_at?: string
+          updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          full_name?: string
+          email?: string | null
+          role_title?: string | null
+          mobile?: string | null
+          phone?: string | null
+          director_id?: string | null
+          profile_id?: string | null
+          status?: Database['public']['Enums']['entity_status']
+          active_from?: string | null
+          active_to?: string | null
+          source_ref?: string | null
+          created_at?: string
+          updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'managers_director_id_fkey'
+            columns: ['director_id']
+            isOneToOne: false
+            referencedRelation: 'directors'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'managers_profile_id_fkey'
+            columns: ['profile_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          current_manager_id: string | null
+          conta_na_meta: boolean
+          status: Database['public']['Enums']['entity_status']
+          valid_from: string | null
+          valid_to: string | null
+          source_ref: string | null
+          created_at: string
+          updated_at: string
+          created_by: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          current_manager_id?: string | null
+          conta_na_meta?: boolean
+          status?: Database['public']['Enums']['entity_status']
+          valid_from?: string | null
+          valid_to?: string | null
+          source_ref?: string | null
+          created_at?: string
+          updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          current_manager_id?: string | null
+          conta_na_meta?: boolean
+          status?: Database['public']['Enums']['entity_status']
+          valid_from?: string | null
+          valid_to?: string | null
+          source_ref?: string | null
+          created_at?: string
+          updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'teams_current_manager_id_fkey'
+            columns: ['current_manager_id']
+            isOneToOne: false
+            referencedRelation: 'managers'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      sellers: {
+        Row: {
+          id: string
+          full_name: string
+          email: string | null
+          phone: string | null
+          mobile: string | null
+          team_id: string | null
+          profile_id: string | null
+          status: Database['public']['Enums']['entity_status']
+          joined_at: string | null
+          left_at: string | null
+          source_ref: string | null
+          created_at: string
+          updated_at: string
+          created_by: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          full_name: string
+          email?: string | null
+          phone?: string | null
+          mobile?: string | null
+          team_id?: string | null
+          profile_id?: string | null
+          status?: Database['public']['Enums']['entity_status']
+          joined_at?: string | null
+          left_at?: string | null
+          source_ref?: string | null
+          created_at?: string
+          updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          full_name?: string
+          email?: string | null
+          phone?: string | null
+          mobile?: string | null
+          team_id?: string | null
+          profile_id?: string | null
+          status?: Database['public']['Enums']['entity_status']
+          joined_at?: string | null
+          left_at?: string | null
+          source_ref?: string | null
+          created_at?: string
+          updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'sellers_team_id_fkey'
+            columns: ['team_id']
+            isOneToOne: false
+            referencedRelation: 'teams'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'sellers_profile_id_fkey'
+            columns: ['profile_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: Record<never, never>
     Functions: {
@@ -98,6 +349,7 @@ export type Database = {
         | 'comercial'
         | 'financeiro'
         | 'auditoria'
+      entity_status: 'ativo' | 'inativo'
     }
     CompositeTypes: Record<never, never>
   }
@@ -108,8 +360,13 @@ export type Database = {
  * derivados do `Database`, para que uma mudança de schema se propague sozinha
  * em vez de exigir edição em dois lugares.
  */
-// `entity_status` nasce na migration 0003 e entra aqui quando existir no banco.
 export type AppRole = Database['public']['Enums']['app_role']
+export type EntityStatus = Database['public']['Enums']['entity_status']
 export type ProfileRow = Database['public']['Tables']['profiles']['Row']
 export type ProfileInsert = Database['public']['Tables']['profiles']['Insert']
 export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
+
+export type DirectorRow = Database['public']['Tables']['directors']['Row']
+export type ManagerRow = Database['public']['Tables']['managers']['Row']
+export type TeamRow = Database['public']['Tables']['teams']['Row']
+export type SellerRow = Database['public']['Tables']['sellers']['Row']
