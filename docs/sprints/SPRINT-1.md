@@ -306,8 +306,30 @@ Estado "sem vínculo" tem tela dedicada: *"Seu usuário ainda não está vincula
 um consultor. Procure o gestor."* Zero linhas por falta de vínculo é
 indistinguível de zero linhas por falta de dados.
 
-*Aceite:* todos os cenários de §6.1 e §6.2 passando, incluindo o gate de cinco
-usuários abaixo.
+> **"As policies com recorte" não têm onde ser presas nesta sprint.**
+>
+> As cinco tabelas que recebem o recorte — `crm_company_relationships`,
+> `crm_opportunities`, `crm_activities`, `crm_tasks`,
+> `crm_portfolio_companies` (`RLS_PERMISSOES.md` §5.3) — nascem da Sprint 2 em
+> diante. Nenhuma existe hoje.
+>
+> A `0009` entrega, portanto, **as funções e nenhuma policy**. Isso não é adiar
+> o recorte; é o oposto. D-018 exige que o escopo exista e esteja provado
+> **antes** da primeira tela comercial, para não repetir o DE-025 da origem. A
+> função nasce pronta e testada; a Sprint 2 só a pendura:
+>
+> ```sql
+> using (responsible_seller_id in (select public.scoped_seller_ids()))
+> ```
+>
+> O que prova a função nesta sprint é o **gate de cinco usuários**, que a chama
+> diretamente sob cada vínculo — não a aplicação dela numa tabela.
+
+*Aceite:* os cenários de §6.2 passando (feito na etapa 8, sobre a trilha) e o
+gate de cinco usuários abaixo. Os cenários de §6.1 que dependem de carteira,
+oportunidade, atividade e contato **não são verificáveis nesta sprint** — as
+tabelas não existem. Eles entram na definição de pronto da Sprint 2, quando as
+policies com recorte forem presas.
 
 ## 10 · Verificação
 
