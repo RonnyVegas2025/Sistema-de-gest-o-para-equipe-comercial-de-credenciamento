@@ -262,7 +262,7 @@ documento.
 
 | # | Decisão | Onde |
 | --- | --- | --- |
-| 1 | View restrita de usuários, expondo só `id` e `full_name` | **D-032** · migration `0011`, ainda não escrita |
+| 1 | View restrita de usuários, expondo só `id` e `full_name` | **D-032** · migration `0011` ✅ |
 | 2 | FKs de vínculo mantidas em `NO ACTION` | **D-034** |
 | 3 | `reactivation_reason` em coluna própria | **D-033** · emenda a D-025 · migration `0010` ✅ |
 | 4 | Ordem para destravar: Edge Function → cinco usuários → gate → login → Vercel | registrada em `SPRINT-1.md` |
