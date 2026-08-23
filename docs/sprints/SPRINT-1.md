@@ -404,6 +404,35 @@ vínculo.
 
 ---
 
+# O que a Sprint 2 herda como aceite
+
+### Regra de aceite inegociável — RLS com recorte na mesma migration
+
+**Nenhuma tabela `crm_*` é criada sem a sua policy com recorte na mesma
+migration.** Não em migration seguinte, não "depois que a tela existir". Se a
+tabela nasce, a policy nasce junto — e o script de verificação daquela migration
+confere que o recorte está lá:
+
+```sql
+using (responsible_seller_id in (select public.scoped_seller_ids()))
+```
+
+**Por que isto é regra e não recomendação.** A Sprint 1 entregou
+`scoped_seller_ids()` provada, mas sem nenhuma tabela onde prendê-la — as cinco
+de `RLS_PERMISSOES.md` §5.3 nascem aqui. Isso deixa D-018 **meio cumprida**: a
+função está provada, o *enforcement* não.
+
+É a situação exata que produziu o DE-025 no sistema de origem, onde uma leitura
+ampla "provisória" seguiu aberta três sprints. Lá também a intenção existia; o
+que faltou foi o momento em que a dívida se tornava visível. Esta regra é esse
+momento: a migration não passa na verificação sem o recorte.
+
+A Sprint 1 entrega **a função**; a Sprint 2 entrega **a aplicação**. A regra
+acima é a garantia de que a segunda metade não fica pendurada — ver a emenda a
+D-018 em `docs/DECISOES.md`.
+
+---
+
 # Fora de escopo desta sprint
 
 Não iniciar, mesmo que pareça rápido:

@@ -392,6 +392,35 @@ opcional.
 
 ---
 
+### Emenda — a Sprint 1 entrega a função, a Sprint 2 entrega o enforcement
+
+A Sprint 1 entregou `scoped_seller_ids()` provada por mutação, **mas sem nenhuma
+tabela onde prendê-la**: as cinco de `RLS_PERMISSOES.md` §5.3 —
+`crm_company_relationships`, `crm_opportunities`, `crm_activities`, `crm_tasks`,
+`crm_portfolio_companies` — nascem da Sprint 2 em diante.
+
+Isso deixa D-018 **meio cumprida**. A função está provada; o enforcement não. E
+essa é exatamente a situação que produziu o DE-025 no sistema de origem: lá a
+intenção também existia, e a leitura ampla "provisória" seguiu aberta três
+sprints. O que faltou não foi decisão — foi um momento em que a dívida se
+tornasse visível.
+
+**Regra de aceite da Sprint 2, para criar esse momento:**
+
+> Nenhuma tabela `crm_*` é criada sem a sua policy com recorte **na mesma
+> migration**. Não em migration seguinte, não "depois que a tela existir". Se a
+> tabela nasce, a policy nasce junto — e o script de verificação daquela
+> migration confere que o recorte está lá.
+
+A verificação é o que torna a regra executável: uma tabela sem recorte não passa,
+e a falha aparece no momento em que a tabela é criada, não numa auditoria três
+sprints depois.
+
+Registrada em `SPRINT-1.md` (seção "O que a Sprint 2 herda como aceite") e em
+`ROADMAP.md`, na Sprint 2.
+
+---
+
 ## D-019 — `x-user-profile` só com remoção do header forjado
 
 **Contexto.** DE-038 do sistema de origem elimina a duplicação de `getUser` e da

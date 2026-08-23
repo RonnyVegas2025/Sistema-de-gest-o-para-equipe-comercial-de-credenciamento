@@ -31,15 +31,15 @@ docs/RLS_PERMISSOES.md           matriz de papéis e resolução de escopo
 docs/VEGAS-PLATFORM-UI-STANDARD.md    fonte normativa visual
 docs/ROADMAP.md                  sequenciamento das sprints
 docs/DIVERGENCIAS_BASE.md        o que não copiar do sistema de origem
-docs/ARQUITETURA.md              ler quando existir
+docs/ARQUITETURA.md              o que ficou implementado (A-006)
 ```
 
 **Durante a Sprint 1, `docs/sprints/SPRINT-1.md` é o documento mais importante**
 — é a ordem de execução autorizada, com critério de aceite por etapa.
 
-`ARQUITETURA.md` **ainda não existe**: ele é produzido na última etapa da Sprint
-1 (A-006), descrevendo o que ficou implementado. Não é pré-requisito de leitura
-até lá, e não deve ser escrito antes.
+`ARQUITETURA.md` foi produzido na última etapa da Sprint 1 (A-006). Ele descreve
+**o que ficou implementado**, e suas §9 e §11 são as mais importantes: o que não
+existe apesar de parecer, e o que nunca rodou contra ambiente real.
 
 ---
 

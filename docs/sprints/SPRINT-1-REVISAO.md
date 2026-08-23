@@ -1,10 +1,13 @@
 # Sprint 1 — Parada obrigatória para revisão
 
-Entregue ao término da **etapa 9**, conforme `SPRINT-1.md`. As etapas 10
-(`npm run verify` final) e 11 (`ARQUITETURA.md`) **não foram iniciadas** e
-aguardam o retorno desta revisão.
+Entregue ao término da **etapa 9**, conforme `SPRINT-1.md`.
 
-Branch: `sprint-1/fundacao` · 17 commits à frente de `main`.
+> **Revisão retornada e liberada.** As decisões estão na seção 9. As etapas 10 e
+> 11 foram executadas depois: `docs/ARQUITETURA.md` descreve o que ficou
+> implementado, e a validação em navegador está registrada abaixo, na seção 7.
+
+Branch: `sprint-1/fundacao`. A contagem de commits muda a cada correção, então
+não é fixada aqui — use `git rev-list --count origin/main..HEAD`.
 
 ---
 
@@ -234,7 +237,7 @@ casos, incluindo conferência independente da união. Contra o banco real, não.
 
 ---
 
-## 7. `npm run verify`
+## 7. Etapa 10 — verificação
 
 ```
 format:check   All matched files use Prettier code style!
@@ -245,6 +248,28 @@ build          ✓ Compiled successfully — 9 rotas + middleware
 ```
 
 O build roda com **valores de placeholder**, não com o projeto real.
+
+**Service role no bundle:** ausente de `.next/static` **e** de `.next/server`.
+
+### Validação em navegador
+
+Feita com o Chromium do ambiente, nas rotas alcançáveis sem Supabase — `/login`,
+`/esqueci-senha`, `/nova-senha`. As rotas autenticadas e o catálogo `/dev` não
+são alcançáveis sem sessão.
+
+| | desktop (1440 px) | tablet (768 px) |
+| --- | --- | --- |
+| altura de `input` | 40 px | **44 px** |
+| altura de `button` | 40 px | **44 px** |
+| foco visível por teclado | sim (`box-shadow`) | sim |
+| rótulos visíveis | "E-mail", "Senha" | idem |
+| hexadecimal no HTML | 2 — ambos a meta `theme-color` (exceção documentada) | idem |
+
+**D-027 confirmado em navegador real**, não só em teste estático. O painel
+institucional vira faixa curta no topo no tablet, com a fita de 3 px preservada.
+
+**Não validado:** os cinco estados (`loading`, `empty`, `error`, `forbidden`,
+`success`) exigem dados e sessão; nenhuma tela com dados existe ainda.
 
 ---
 
