@@ -13,6 +13,7 @@ domínio, sem abrir o painel nem reler migrations. A sincronia é manual.
 | `directors.sql` | `0004_directors.sql` |
 | `managers.sql` | `0005_managers.sql` |
 | `sellers.sql` | `0006_sellers.sql` |
+| `crm_record_status_history.sql` | `0008_trilha_cadastral.sql` |
 
 ## Comportamento da RLS que a aplicação precisa respeitar
 

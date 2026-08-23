@@ -229,6 +229,28 @@ equipe inventada.
 *Aceite:* importar o mesmo arquivo duas vezes não duplica nada; renomear uma
 pessoa na origem e reimportar **atualiza**, não cria.
 
+> **A etapa 7 entrega o MECANISMO, não os DADOS.**
+>
+> A carga real da estrutura comercial **não acontece nesta sprint**. Ela depende
+> de uma exportação do Painel ADM que inclua a coluna `id` de cada linha — o
+> `source_ref` — e essa exportação ainda não foi feita: é trabalho no outro
+> repositório, congelado durante esta sprint.
+>
+> Ao revisar, não confundir as duas coisas:
+>
+> ```
+> importação pronta            ✓ entregue na etapa 7
+> estrutura comercial carregada ✗ pendente da exportação do Painel
+> ```
+>
+> Consequência prática: ao fim da sprint, `directors`, `managers`, `teams` e
+> `sellers` estarão vazias ou com dados de teste. O **gate de cinco usuários** da
+> etapa 9 precisa de vínculos reais nessas tabelas, então as linhas dele são
+> criadas à mão, não importadas.
+>
+> Quando a exportação existir e o formato divergir dos cabeçalhos propostos, o
+> ajuste é na spec, não no motor.
+
 ## 8 · Trilha cadastral e auditoria
 
 Migration `0008`. **Antes de qualquer parte da `0009`** — as entidades da etapa 6
