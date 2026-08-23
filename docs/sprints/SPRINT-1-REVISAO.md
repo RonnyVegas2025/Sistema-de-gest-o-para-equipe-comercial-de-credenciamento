@@ -131,7 +131,7 @@ Sprint 2 a pendura.
 
 ---
 
-## 3. As nove migrations
+## 3. As onze migrations
 
 | # | Arquivo | Conteúdo | Verificação |
 | --- | --- | --- | --- |
@@ -144,9 +144,14 @@ Sprint 2 a pendura.
 | 0007 | `0007_source_ref.sql` | `source_ref` + índices únicos parciais | 17 ✅ |
 | 0008 | `0008_trilha_cadastral.sql` | trilha imutável, quatro funções | 40 ✅ |
 | 0009 | `0009_escopo_hierarquico.sql` | funções de escopo | 21 ✅ |
+| 0010 | `0010_reactivation_reason.sql` | motivo da reativação em coluna própria | 23 ✅ |
+| 0011 | `0011_user_directory.sql` | view restrita de usuários para vínculo | 9 ✅ |
 
-**223 checagens, todas OK contra o banco real.** Todas as nove são idempotentes,
+**255 checagens, todas OK contra o banco real.** Todas as onze são idempotentes,
 verificado por reaplicação.
+
+As `0010` e `0011` nasceram do retorno desta revisão (seção 9), não da execução
+original das etapas.
 
 ---
 
@@ -265,6 +270,7 @@ documento.
 | 1 | View restrita de usuários, expondo só `id` e `full_name` | **D-032** · migration `0011` ✅ |
 | 2 | FKs de vínculo mantidas em `NO ACTION` | **D-034** |
 | 3 | `reactivation_reason` em coluna própria | **D-033** · emenda a D-025 · migration `0010` ✅ |
+|   | *(as duas migrations foram aplicadas e verificadas no banco real)* | |
 | 4 | Ordem para destravar: Edge Function → cinco usuários → gate → login → Vercel | registrada em `SPRINT-1.md` |
 
 Também registrado, por ser armadilha de repetição: **revogar `execute` apenas de
