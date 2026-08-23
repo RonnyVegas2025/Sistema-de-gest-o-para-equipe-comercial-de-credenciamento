@@ -1,82 +1,115 @@
 /**
- * PROVISÓRIO — não editar como se fosse definitivo.
+ * Tipos do banco — schema `public`.
  *
- * Este arquivo é normalmente **gerado**: `npm run db:types` o produz a partir do
- * schema real. Aqui ele está escrito à mão porque a etapa 4 (autenticação)
- * precede a etapa 6 (migrations), e o middleware, a sessão, os papéis e a
- * navegação não compilam sem os tipos de `profiles`.
+ * ORIGEM DESTE ARQUIVO. Normalmente ele é gerado por `npm run db:types`. Aqui
+ * ele é mantido à mão, porque o projeto aplica migrations pelo SQL Editor
+ * (D-031) e o gerador oficial exige CLI vinculado ao projeto.
  *
- * A forma abaixo segue `docs/MODELO_DADOS.md` §2.1 e §1.1 — é o que a migration
- * `0001` vai criar.
+ * O que substitui a geração automática: cada migration vem com um script em
+ * `supabase/checks/` que lê o catálogo do Postgres e compara coluna a coluna
+ * com o modelo — nome, tipo, nulidade, default, e "nenhuma coluna a mais". A
+ * forma abaixo foi escrita a partir da saída desses scripts contra o banco
+ * real, não a partir do modelo em prosa.
  *
- * SUBSTITUIÇÃO AGENDADA: na etapa 6, imediatamente após aplicar a `0001`, rodar
+ * Estado verificado: migrations 0001 e 0002 aplicadas; 27 + 7 verificações OK.
  *
- *     npm run db:types && npm run verify
+ * REGRA AO MEXER: este arquivo só muda depois de uma migration aplicada E
+ * verificada, refletindo a saída do script. Nunca "adiantar" uma coluna que o
+ * banco ainda não tem — o tipo passaria a mentir, e o typecheck confirmaria a
+ * mentira.
  *
- * A saída da máquina sobrescreve este arquivo por inteiro. Se a forma escrita
- * aqui divergir do schema real, o `typecheck` acusa nesse momento — que é o
- * ponto do procedimento: a divergência aparece alto, num instante definido, e
- * não silenciosamente meses depois.
- *
- * Enquanto este cabeçalho existir, o arquivo é provisório.
+ * A forma segue a do gerador (`Row`/`Insert`/`Update`/`Relationships`) para que
+ * a troca por saída de máquina, se um dia houver CLI, seja um diff pequeno.
  */
 
-export type AppRole =
-  | 'administrador'
-  | 'gestor_adm'
-  | 'analista_adm'
-  | 'comercial'
-  | 'financeiro'
-  | 'auditoria'
-
-export type EntityStatus = 'ativo' | 'inativo'
-
-/**
- * `must_change_password` nasce `true` por decisão do CRM — usuário criado por
- * administrador recebe senha temporária e troca no primeiro acesso. O sistema
- * de origem usa default `false`; a divergência é deliberada e vale para a
- * migration `0001`.
- */
-export type ProfileRow = {
-  id: string
-  full_name: string
-  email: string
-  role: AppRole
-  is_active: boolean
-  must_change_password: boolean
-  created_at: string
-  updated_at: string
-}
-
-export type ProfileInsert = {
-  id: string
-  full_name: string
-  email: string
-  role?: AppRole
-  is_active?: boolean
-  must_change_password?: boolean
-  created_at?: string
-  updated_at?: string
-}
-
-export type ProfileUpdate = Partial<ProfileInsert>
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
   public: {
     Tables: {
       profiles: {
-        Row: ProfileRow
-        Insert: ProfileInsert
-        Update: ProfileUpdate
-        Relationships: []
+        Row: {
+          id: string
+          full_name: string
+          email: string
+          role: Database['public']['Enums']['app_role']
+          is_active: boolean
+          must_change_password: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          full_name: string
+          email: string
+          role?: Database['public']['Enums']['app_role']
+          is_active?: boolean
+          must_change_password?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          full_name?: string
+          email?: string
+          role?: Database['public']['Enums']['app_role']
+          is_active?: boolean
+          must_change_password?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'profiles_id_fkey'
+            columns: ['id']
+            isOneToOne: true
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+        ]
       }
     }
     Views: Record<never, never>
-    Functions: Record<never, never>
+    Functions: {
+      auth_role: {
+        Args: Record<PropertyKey, never>
+        Returns: Database['public']['Enums']['app_role']
+      }
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      has_role: {
+        Args: { roles: Database['public']['Enums']['app_role'][] }
+        Returns: boolean
+      }
+    }
     Enums: {
-      app_role: AppRole
-      entity_status: EntityStatus
+      app_role:
+        | 'administrador'
+        | 'gestor_adm'
+        | 'analista_adm'
+        | 'comercial'
+        | 'financeiro'
+        | 'auditoria'
     }
     CompositeTypes: Record<never, never>
   }
 }
+
+/**
+ * Apelidos usados pela aplicação. O gerador não os produz — ficam aqui,
+ * derivados do `Database`, para que uma mudança de schema se propague sozinha
+ * em vez de exigir edição em dois lugares.
+ */
+// `entity_status` nasce na migration 0003 e entra aqui quando existir no banco.
+export type AppRole = Database['public']['Enums']['app_role']
+export type ProfileRow = Database['public']['Tables']['profiles']['Row']
+export type ProfileInsert = Database['public']['Tables']['profiles']['Insert']
+export type ProfileUpdate = Database['public']['Tables']['profiles']['Update']
