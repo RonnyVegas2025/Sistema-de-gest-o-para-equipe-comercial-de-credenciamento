@@ -133,6 +133,9 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
 - Toda função de trilha: `security definer` + `set search_path = public` +
   `revoke execute from public, authenticated`. **Uma por entidade** — gravador
   genérico de histórico anula a imutabilidade.
+- **`from public, authenticated` são os dois, não um.** Revogar só de
+  `authenticated` é inócuo: o grant implícito de `PUBLIC` sustenta o privilégio,
+  e nada dá sinal — a trilha continua gravando. Ver `RLS_PERMISSOES.md` §5.6.
 
 **Visual**
 

@@ -10,7 +10,7 @@
 | Sistema | CRM Comercial de Credenciamento Vegas |
 | Base técnica | Painel ADM de Produtos Agregados, branch `sprint-3/relatorios-e-estrutura-comercial` |
 | Estado | Sprint 0 — documentação aprovada, implementação não iniciada |
-| Decisões fechadas | D-001 a D-031 |
+| Decisões fechadas | D-001 a D-034 |
 
 ---
 
@@ -597,8 +597,31 @@ carrega:
 ```
 inactivated_at      timestamptz
 inactivated_by      uuid → profiles(id)
-inactivation_reason text
+inactivation_reason text          -- por que este registro está inativo
+reactivation_reason text          -- por que foi devolvido à circulação
 ```
+
+**Emenda — os dois motivos ficam em colunas SEPARADAS.** A redação original
+exigia motivo nos dois sentidos sem dizer onde ele mora, e a primeira
+implementação reusou `inactivation_reason` para ambos, transformando-a em
+"motivo da transição mais recente".
+
+Isso é ambíguo por construção. A coluna precisa responder **por que este
+registro está inativo** — não o que aconteceu por último. Depois de uma
+reativação, um campo único passaria a explicar por que o registro está ATIVO,
+enquanto o nome promete o contrário; e quem lesse `inactivation_reason` de um
+registro reativado receberia a informação errada sem nenhum sinal disso.
+
+A trilha em `crm_record_status_history` já guarda os dois eventos com seus
+motivos próprios em `reason`. As colunas na entidade são o estado corrente:
+
+| Coluna | Preenchida em | Limpa em |
+| --- | --- | --- |
+| `inactivation_reason` | `ativo → inativo` | — permanece, é o histórico do estado |
+| `reactivation_reason` | `inativo → ativo` | `ativo → inativo` |
+| `inactivated_at` / `_by` | `ativo → inativo`, pelo banco | `inativo → ativo` |
+
+Migration `0010`. A `0008` não é editada (D-021).
 
 **Divisão de responsabilidade.** O motivo é texto que só o operador conhece; o
 banco não tem como inventá-lo.
@@ -882,6 +905,63 @@ de verificação em `supabase/checks/`, somente leitura, que lê o catálogo do
 Postgres e compara com o modelo — colunas, tipos, defaults, constraints, índices,
 `security definer`, `search_path`, triggers, RLS e policies. "Apliquei" vira
 "apliquei e aqui está a prova".
+
+---
+
+## D-032 — Diretório restrito de usuários para vínculo
+
+**Contexto.** `profiles_select` permite leitura apenas da própria linha e do
+administrador (`RLS_PERMISSOES.md` §5.1). Mas os formulários de diretor, gestor
+e vendedor permitem vincular a pessoa a um usuário existente (`profile_id`), e
+quem escreve neles é `gestor_adm` além do administrador. Com a policy atual, o
+gestor não enxerga a lista para escolher.
+
+**Decisão.** Uma **view restrita** expondo apenas `id` e `full_name` dos perfis
+ativos, para preencher o select de vínculo. A policy de `profiles` **não** é
+alargada.
+
+**Motivo.** Alargar daria ao gestor `role`, `is_active` e o e-mail de todos os
+usuários, quando ele precisa apenas de um nome e um id. A capability §3 dá
+`usuarios.read` só ao administrador; a view atende a necessidade real sem
+contrariar a matriz.
+
+**Cuidado obrigatório, a documentar no cabeçalho da view.** View sobre tabela com
+RLS é `security definer` na prática: ela roda com os privilégios de quem a criou,
+**ignora a RLS da tabela base**, e o `WHERE` dela passa a ser a única barreira. O
+linter do Supabase vai apontar — é o mecanismo, não um defeito. Documentar a
+exceção, não "corrigir".
+
+Consequência: a view não pode ganhar coluna nova sem revisar o que ela expõe.
+Acrescentar `email` ali seria alargar a leitura sem tocar em policy nenhuma.
+
+---
+
+## D-033 — `reactivation_reason` em coluna própria
+
+Ver a emenda em D-025. Resumo: os motivos de inativação e de reativação vivem em
+colunas separadas, porque uma coluna única deixa de responder "por que este
+registro está inativo" no instante em que ele é reativado. Migration `0010`.
+
+---
+
+## D-034 — FKs de vínculo sem ação de delete
+
+**Contexto.** As FKs de `profile_id`, `created_by` e `updated_by` nas entidades
+da estrutura comercial não declaram ação de delete, então vale `NO ACTION`.
+Consequência observada em teste: com um diretor vinculado a um perfil, apagar
+aquele usuário no painel de Auth do Supabase é **bloqueado**, com erro de FK
+citando `directors`.
+
+**Decisão.** Mantido `NO ACTION`.
+
+**Motivo.** O CRM não apaga usuário — saída de circulação é `is_active = false`.
+O bloqueio recusa uma operação que o sistema não sanciona, e falhar alto é melhor
+que desvincular em silêncio: `on delete set null` deixaria o cadastro comercial
+apontando para o vazio sem nenhum registro de que houve um vínculo.
+
+**Consequência.** Quem precisar apagar um usuário de teste no painel vai receber
+um erro de FK que não explica o contexto. É o custo aceito; a alternativa custa
+mais.
 
 ---
 

@@ -255,7 +255,26 @@ O build roda com **valores de placeholder**, não com o projeto real.
 
 ---
 
-## 9. Pendências que a revisão precisa decidir
+## 9. Retorno da revisão — decisões tomadas
+
+As quatro pendências abaixo foram decididas. Duas viraram migration; duas viraram
+documento.
+
+| # | Decisão | Onde |
+| --- | --- | --- |
+| 1 | View restrita de usuários, expondo só `id` e `full_name` | **D-032** · migration `0011`, ainda não escrita |
+| 2 | FKs de vínculo mantidas em `NO ACTION` | **D-034** |
+| 3 | `reactivation_reason` em coluna própria | **D-033** · emenda a D-025 · migration `0010` ✅ |
+| 4 | Ordem para destravar: Edge Function → cinco usuários → gate → login → Vercel | registrada em `SPRINT-1.md` |
+
+Também registrado, por ser armadilha de repetição: **revogar `execute` apenas de
+`authenticated` é inócuo**, porque o grant implícito de `PUBLIC` sustenta o
+privilégio. Está em `RLS_PERMISSOES.md` §5.6 — que é onde alguém lê ao escrever a
+próxima função de trilha — e resumido no `CLAUDE.md`.
+
+### Pendências originais, para registro
+
+### O que estava em aberto
 
 1. **`profiles_select` não inclui `gestor_adm`.** O gestor escreve em estrutura
    comercial mas **não enxerga a lista de usuários** para vincular `profile_id`.
