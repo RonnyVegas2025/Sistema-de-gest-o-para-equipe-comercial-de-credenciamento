@@ -433,6 +433,20 @@ D-018 em `docs/DECISOES.md`.
 
 ---
 
+# Fechamento: o gate contra o banco real
+
+As etapas 1 a 11 terminam com `npm run verify` limpo e as onze migrations
+verificadas — mas **a sprint não fecha aí**. Ela fecha contra o banco real.
+
+O roteiro de execução no painel está em **`docs/sprints/SPRINT-1-GATE.md`**:
+deploy da Edge Function, criação dos cinco usuários, seed da estrutura comercial
+(`supabase/seed/gate_estrutura.sql`) e o gate propriamente dito
+(`supabase/checks/GATE_painel.sql`, versão de uma colagem só para o SQL Editor).
+
+O PR da Sprint 1 só é aberto depois de as oito linhas do gate voltarem `OK`.
+
+---
+
 # Fora de escopo desta sprint
 
 Não iniciar, mesmo que pareça rápido:

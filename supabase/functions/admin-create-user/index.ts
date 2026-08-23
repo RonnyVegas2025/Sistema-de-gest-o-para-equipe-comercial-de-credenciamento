@@ -91,11 +91,28 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' })
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  if (!supabaseUrl || !anonKey || !serviceKey) {
-    return json(500, { error: 'missing_env' })
+  // O Supabase injeta SUPABASE_URL, SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY
+  // automaticamente em toda Edge Function, e o prefixo SUPABASE_ é RESERVADO —
+  // não dá para criar um secret com esses nomes. Se os valores injetados não
+  // servirem (projeto com as chaves legadas desabilitadas, por exemplo), defina
+  // os secrets alternativos abaixo, que têm precedência.
+  const supabaseUrl =
+    Deno.env.get('PROJECT_URL') ?? Deno.env.get('SUPABASE_URL')
+  const anonKey =
+    Deno.env.get('PUBLISHABLE_KEY') ?? Deno.env.get('SUPABASE_ANON_KEY')
+  const serviceKey =
+    Deno.env.get('SERVICE_ROLE_KEY') ??
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+  // Diz QUAL falta. Um 'missing_env' genérico é beco sem saída para quem depura
+  // pelo painel, sem CLI e sem logs locais. O valor nunca é ecoado — só o nome.
+  const faltando = [
+    !supabaseUrl && 'PROJECT_URL/SUPABASE_URL',
+    !anonKey && 'PUBLISHABLE_KEY/SUPABASE_ANON_KEY',
+    !serviceKey && 'SERVICE_ROLE_KEY/SUPABASE_SERVICE_ROLE_KEY',
+  ].filter(Boolean)
+  if (faltando.length > 0) {
+    return json(500, { error: 'missing_env', missing: faltando })
   }
 
   // Camada 3a: sessão. Cliente anon com o JWT do chamador; getUser() valida.
