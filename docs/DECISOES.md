@@ -498,6 +498,7 @@ inativação.
 | `crm_activities` | histórico | — | não inativar |
 | `crm_portfolios` | encerrar/arquivar (`closed_at`) | gestor · admin | inativação administrativa |
 | `crm_portfolio_companies` | encerrar · redistribuir (`ended_at`) | gestor no escopo | não apagar; preservar histórico |
+| `profiles` | desativar/reativar acesso (`is_active`) | administrador | **não existe conceito** — ver D-036 |
 
 **Exemplos da distinção:**
 
@@ -991,6 +992,79 @@ apontando para o vazio sem nenhum registro de que houve um vínculo.
 **Consequência.** Quem precisar apagar um usuário de teste no painel vai receber
 um erro de FK que não explica o contexto. É o custo aceito; a alternativa custa
 mais.
+
+---
+
+## D-035 — A checagem de service role procura o nome da variável, não o prefixo da chave
+
+**Contexto.** O CI tem uma etapa que reprova o build se a service role aparecer
+no bundle. Ela procura a string `SUPABASE_SERVICE_ROLE_KEY`. A "melhoria"
+evidente seria procurar também `sb_secret_`, o prefixo do formato novo de
+chave — afinal é o valor, não o nome, que causa dano.
+
+**A melhoria evidente quebra o CI para sempre.** O próprio
+`@supabase/supabase-js` carrega o prefixo em código de detecção de formato:
+
+```js
+e.startsWith("sb_publishable_") || e.startsWith("sb_secret_")
+```
+
+Isso entra em `.next/server/chunks/*` de **qualquer** build que use a
+biblioteca — verificado neste repositório, na etapa 1 da Sprint 2. Não é
+vazamento: é a biblioteca reconhecendo o formato de uma chave que ela recebe,
+e o literal existe mesmo quando nenhuma service role passa perto.
+
+**Decisão.** A checagem procura **`SUPABASE_SERVICE_ROLE_KEY`** — o nome da
+variável — em `.next/static` **e** em `.next/server`. Não procura `sb_secret_`,
+nem qualquer prefixo de chave.
+
+**Por que isto está escrito.** Sem este registro, o desfecho é previsível:
+alguém alarga o padrão de boa-fé, o CI fica vermelho em todo build, e a saída
+mais rápida é desligar a checagem. **Uma verificação de segurança desligada é
+pior que a versão limitada que ela substituiu**, porque some junto com o sinal
+de que existia.
+
+**O que a checagem não faz, e é bom saber.** Ela pega a reintrodução por nome —
+um `serverEnv()` de volta, um `process.env.SUPABASE_SERVICE_ROLE_KEY` em código
+de runtime. **Não pega** uma chave colada como literal sem o nome ao lado. Isso
+é rede de segurança, não autorização: o desenho é a chave nunca chegar perto do
+bundle (D-030), e a checagem só avisa quando o desenho falhou de um jeito
+específico.
+
+---
+
+## D-036 — `is_active` de usuário é encerramento operacional, não erro cadastral
+
+**Contexto.** A matriz de D-022 não incluía `profiles`. A pergunta apareceu na
+etapa 1 da Sprint 2, quando a tela de usuários passou a existir e a ação de
+desativar ficou sem semântica definida.
+
+**Decisão.** Para usuário, `is_active = false` é **encerramento operacional**.
+A pessoa saiu da empresa ou perdeu o acesso; o registro continua válido e o
+histórico continua contando. Não é o caso de cadastro mestre de D-022, onde
+`status = 'inativo'` significa registro criado incorretamente.
+
+Consequências que decorrem disso, e não de preferência:
+
+- **O que ela apaga é acesso, não existência.** Quem desativou continua sendo o
+  autor das linhas que criou, continua resolvível em `inactivated_by`, em
+  `ended_by` e em toda trilha. Um usuário desativado que sumisse das telas
+  transformaria histórico em referência quebrada.
+- **A reativação é normal, não excepcional.** Alguém volta de licença, muda de
+  área e volta. Isso não exige o rito de D-025, escrito para reverter erro de
+  cadastro.
+- **`profiles` não ganha `status entity_status`.** `is_active` já responde a
+  pergunta certa, e acrescentar a coluna de cadastro mestre traria junto a
+  semântica errada.
+
+**Fica na matriz de D-022 assim:**
+
+| Entidade | Operação normal | Quem faz | Inativação (`status = 'inativo'`) |
+| --- | --- | --- | --- |
+| `profiles` | desativar/reativar acesso (`is_active`) | administrador | não existe conceito — ver D-036 |
+
+**O que ainda não está decidido:** onde a ação entra na interface e se ela grava
+motivo e autoria. A proposta está no plano da Sprint 2.
 
 ---
 

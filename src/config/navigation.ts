@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Home } from 'lucide-react'
+import { Home, Users } from 'lucide-react'
 import type { AppRole } from '@/types/database'
 import { canRead, type ModuleKey } from '@/lib/permissions/can'
 
@@ -24,11 +24,12 @@ export type NavItem = {
 /**
  * Definição única do menu. Menu, breadcrumb e verificação de rota leem daqui.
  *
- * **Item só existe quando a página está funcional.** Nesta etapa só existe
- * `/inicio`. Carteira, oportunidades, agenda, visitas, estabelecimentos e os
- * demais entram como parte da entrega da sprint que os torna funcionais — nunca
- * antes, e nunca desabilitados. Item morto no menu ensina o usuário a ignorar o
- * menu.
+ * **Item só existe quando a página está funcional.** Carteira, oportunidades,
+ * agenda, visitas, estabelecimentos e os demais entram como parte da entrega da
+ * sprint que os torna funcionais — nunca antes, e nunca desabilitados. Item
+ * morto no menu ensina o usuário a ignorar o menu.
+ *
+ * `Usuários` entrou junto com a página, na etapa 1 da Sprint 2, e não antes.
  */
 export const NAVIGATION: readonly NavItem[] = [
   {
@@ -37,6 +38,13 @@ export const NAVIGATION: readonly NavItem[] = [
     group: 'Operação',
     module: 'inicio',
     icon: Home,
+  },
+  {
+    label: 'Usuários',
+    href: '/usuarios',
+    group: 'Administração',
+    module: 'usuarios',
+    icon: Users,
   },
 ]
 

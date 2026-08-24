@@ -11,8 +11,21 @@ import { canRead } from '@/lib/permissions/can'
 
 describe('menu', () => {
   it('nenhum item morto: todo item aponta para rota existente nesta etapa', () => {
-    // Enquanto só /inicio existe, qualquer outro href seria item morto.
-    expect(NAVIGATION.map((i) => i.href)).toEqual(['/inicio'])
+    // A lista cresce junto com as páginas, nunca antes delas. Um href aqui sem
+    // rota correspondente é item morto, e item morto ensina a ignorar o menu.
+    expect(NAVIGATION.map((i) => i.href)).toEqual(['/inicio', '/usuarios'])
+  })
+
+  it('Usuários só aparece para administrador', () => {
+    for (const role of ALL_ROLES) {
+      const hrefs = navigationFor(role).map((i) => i.href)
+      expect(hrefs.includes('/usuarios')).toBe(role === 'administrador')
+    }
+  })
+
+  it('Usuários vive em Administração', () => {
+    const usuarios = NAVIGATION.find((i) => i.href === '/usuarios')
+    expect(usuarios?.group).toBe('Administração')
   })
 
   it('todo grupo declarado está na ordem canônica', () => {
