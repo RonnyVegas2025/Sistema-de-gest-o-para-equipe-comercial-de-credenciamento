@@ -99,6 +99,13 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
   o teste, quebrar o código de propósito, confirmar que reprova, restaurar.
   Sem isso o teste é uma afirmação, não uma garantia — e teste de segurança que
   passa por vacuidade é pior que teste nenhum, porque cria confiança.
+- **Quando um teste de recusa passar, confirmar por QUAL recusa ele passou.**
+  Um teste que reprova pelo motivo errado — validação de formato disparando
+  antes da checagem de identidade, papel recusado antes da regra que se queria
+  exercitar — é indistinguível de um teste que protege. A mutação é o que
+  revela: se remover a barreira alvo e o teste continuar verde, ele nunca a
+  testou. Caso real: fixtures com `id: 'a1'` reprovavam por uuid inválido, e a
+  recusa de auto-desativação nunca era alcançada (Sprint 2, etapa 1b).
 - A RLS é a fronteira real. Menu e guarda de rota são conveniência.
 - Nunca relaxar RLS para fazer uma tela funcionar.
 - Service role apenas em Edge Function. Nunca no frontend, nunca com prefixo
