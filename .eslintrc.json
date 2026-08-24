@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json.schemastore.org/eslintrc",
+  "root": true,
+  "ignorePatterns": ["supabase/functions/**"],
+  "extends": [
+    "next/core-web-vitals",
+    "next/typescript",
+    "plugin:@typescript-eslint/recommended",
+    "prettier"
+  ],
+  "plugins": ["@typescript-eslint"],
+  "parserOptions": {
+    "project": "./tsconfig.json"
+  },
+  "rules": {
+    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "@typescript-eslint/consistent-type-imports": [
+      "error",
+      {
+        "prefer": "type-imports"
+      }
+    ],
+    "no-console": [
+      "warn",
+      {
+        "allow": ["warn", "error"]
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["**/lib/supabase/server", "@/lib/supabase/server"],
+            "message": "Cliente de servidor não pode ser importado por componente client. Use @/lib/supabase/client."
+          },
+          {
+            "group": ["**/lib/env", "@/lib/env"],
+            "message": "Importe env apenas em contexto de servidor. Para valores públicos, use NEXT_PUBLIC_* diretamente."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["src/components/**/*.{ts,tsx}", "src/app/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-syntax": [
+          "error",
+          {
+            "selector": "Literal[value=/#(?:[0-9a-fA-F]{3}){1,2}\\b/]",
+            "message": "Cor literal não é permitida. Use os tokens de src/styles/tokens.css ou as classes do Tailwind."
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/lib/supabase/server.ts",
+        "src/lib/env.ts",
+        "src/lib/auth/**/*",
+        "src/lib/users/**/*",
+        "src/lib/directors/**/*",
+        "src/lib/managers/**/*",
+        "src/lib/teams/**/*",
+        "src/lib/sellers/**/*",
+        "src/lib/import/**/*",
+        "src/app/**/route.ts",
+        "scripts/**/*"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "e2e/**/*"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off"
+      }
+    }
+  ]
+}

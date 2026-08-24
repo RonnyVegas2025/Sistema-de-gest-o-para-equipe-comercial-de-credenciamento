@@ -237,6 +237,20 @@ using (
 
 Quem não tem o estabelecimento no alcance não lê seus contatos.
 
+## 5.4-b Diretório de usuários para vínculo (D-032)
+
+`profiles` não é lida pelo gestor (§5.1), mas os formulários de diretor, gestor e
+vendedor precisam de uma lista de usuários para preencher `profile_id`. Uma
+**view restrita** expõe apenas `id` e `full_name` dos perfis ativos.
+
+**View sobre tabela com RLS é `security definer` na prática.** Ela roda com os
+privilégios de quem a criou e **ignora a RLS da tabela base**; o `WHERE` da view
+passa a ser a única barreira. O linter do Supabase aponta isso — é o mecanismo,
+não defeito. Documentar no cabeçalho, não "corrigir".
+
+Consequência operacional: acrescentar coluna à view alarga a leitura sem tocar em
+policy nenhuma. Toda alteração nela é alteração de superfície de exposição.
+
 ## 5.5 Catálogos
 
 `commercial_products` · `crm_loss_reasons` — leitura ampla; escrita
@@ -268,6 +282,29 @@ security definer
 set search_path = public                    -- fixo e mínimo
 revoke execute on function ... from public, authenticated;
 ```
+
+> ### `from public, authenticated` — os DOIS, e não é redundância
+>
+> **Revogar apenas de `authenticated` é inócuo.** O Postgres concede `EXECUTE` a
+> `PUBLIC` por padrão ao criar uma função, e esse grant implícito sustenta o
+> privilégio para todo mundo. Depois de `revoke execute ... from authenticated`,
+> `has_function_privilege('authenticated', f, 'EXECUTE')` continua devolvendo
+> **true**, e a função segue chamável pela API.
+>
+> Verificado em banco durante a Sprint 1:
+>
+> ```
+> revoke só de authenticated  →  has_function_privilege = true   (não mudou nada)
+> revoke de public TAMBÉM     →  has_function_privilege = false  (agora sim)
+> ```
+>
+> É armadilha de repetição: a próxima função de trilha será escrita por alguém
+> que revoga só de `authenticated` achando que basta — e nada dará sinal, porque
+> a trilha continua gravando normalmente. O único sintoma é o teste de ataque de
+> §6.2 passar a permitir a chamada direta.
+>
+> Por isso o teste de ataque de cada função de trilha **verifica os dois
+> grants**, não só um.
 
 **Uma função por entidade de origem.** Nada de gravador genérico de histórico:
 uma função capaz de inserir qualquer `scope` com qualquer `target_id` anularia a

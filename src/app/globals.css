@@ -1,0 +1,10 @@
+/**
+ * Folha global. Importa os tokens (fonte única de cor, raio e sombra)
+ * antes das camadas do Tailwind. As fontes Outfit e Inter e as variáveis
+ * --font-outfit / --font-inter entram na etapa 9.
+ */
+@import '../styles/tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

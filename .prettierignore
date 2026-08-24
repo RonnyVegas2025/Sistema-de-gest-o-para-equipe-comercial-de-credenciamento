@@ -1,0 +1,11 @@
+.next
+node_modules
+coverage
+playwright-report
+src/types/database.ts
+public/brand
+
+# documentação — prosa, fora do formatador
+docs
+README.md
+CLAUDE.md

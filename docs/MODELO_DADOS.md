@@ -762,6 +762,12 @@ crm_assignment_history  (polimórfica: relationship | portfolio | opportunity)
 
 Uma por vez, com confirmação antes da próxima (D-021).
 
+> **Renumerada.** A Sprint 1 consumiu `0010` e `0011` com as correções saídas da
+> parada obrigatória de revisão (D-032 e D-033), que não estavam previstas. Tudo
+> da Sprint 2 em diante deslocou **duas posições**. A tabela abaixo é a
+> numeração válida; qualquer documento que ainda cite `0010 = companies` está
+> desatualizado.
+
 | # | Assunto | Sprint |
 | --- | --- | --- |
 | 0001 | `app_role`, `profiles`, funções `auth_role`/`is_admin`/`has_role`, `set_updated_at`, `handle_new_user`, `prevent_profile_tampering`, RLS | 1 |
@@ -773,16 +779,18 @@ Uma por vez, com confirmação antes da próxima (D-021).
 | 0007 | `source_ref` nas quatro tabelas + índices únicos parciais | 1 |
 | 0008 | `crm_record_status_history` + funções e triggers de trilha cadastral das entidades já existentes | 1 |
 | 0009 | Funções de escopo (`current_*`, `scoped_seller_ids`) + policies com recorte | 1 |
-| 0010 | `companies` + trilha cadastral | 2 |
-| 0011 | `crm_contacts` + trilha cadastral | 2 |
-| 0012 | `crm_relationship_type`, `crm_opportunity_origin`, `crm_company_relationships` | 2 |
-| 0013 | `crm_portfolios`, `crm_portfolio_companies`, `crm_assignment_history` | 3 |
-| 0014 | `commercial_products`, `crm_loss_reasons` | 4 |
-| 0015 | `crm_opportunity_status`, `crm_opportunities` + índice único parcial + CHECK | 4 |
-| 0016 | `crm_vegas_card_terms`, `crm_vegas_pay_terms` | 4 |
-| 0017 | `crm_opportunity_status_history` + trigger; trigger de `requires_notes` | 4 |
-| 0018 | `crm_activity_type`, `crm_activities` — **sem** `source_task_id` | 5 |
-| 0019 | `crm_task_type`, `crm_task_status`, `crm_tasks`; depois `alter table crm_activities add column source_task_id` com a FK | 5 |
+| 0010 | `reactivation_reason` nas quatro entidades (D-033) | 1 |
+| 0011 | View `user_directory` para vínculo de perfil (D-032) | 1 |
+| 0012 | `companies` + trilha cadastral | 2 |
+| 0013 | `crm_contacts` + trilha cadastral | 2 |
+| 0014 | `crm_relationship_type`, `crm_opportunity_origin`, `crm_company_relationships` | 2 |
+| 0015 | `crm_portfolios`, `crm_portfolio_companies`, `crm_assignment_history` | 3 |
+| 0016 | `commercial_products`, `crm_loss_reasons` | 4 |
+| 0017 | `crm_opportunity_status`, `crm_opportunities` + índice único parcial + CHECK | 4 |
+| 0018 | `crm_vegas_card_terms`, `crm_vegas_pay_terms` | 4 |
+| 0019 | `crm_opportunity_status_history` + trigger; trigger de `requires_notes` | 4 |
+| 0020 | `crm_activity_type`, `crm_activities` — **sem** `source_task_id` | 5 |
+| 0021 | `crm_task_type`, `crm_task_status`, `crm_tasks`; depois `alter table crm_activities add column source_task_id` com a FK | 5 |
 
 Cada migration que cria entidade com `status` traz junto a trigger de trilha
 cadastral correspondente — `crm_record_status_history` nasce na Sprint 1 porque

@@ -1,0 +1,161 @@
+/**
+ * Tokens de tema — fonte única de verdade para cor, raio e sombra.
+ * Cores foram amostradas do logo oficial:
+ *   #4D56A1  tipografia e moldura do selo
+ *   #6E68AE  início do gradiente do cartão
+ *   #9E7A9C  meio do gradiente
+ *   #D69086  fim do gradiente
+ *
+ * Nenhum componente deve conter hexadecimal. Use as classes do Tailwind
+ * mapeadas em tailwind.config.ts ou var(--vg-*) quando precisar de CSS puro.
+ */
+
+@layer base {
+  :root {
+    /* ---- marca ---- */
+    --vg-brand-50: #f0f0f8;
+    --vg-brand-100: #e1e2f1;
+    --vg-brand-200: #c4c6e3;
+    --vg-brand-300: #9b9ecd;
+    --vg-brand-400: #6e68ae;
+    --vg-brand-500: #4d56a1;
+    --vg-brand-600: #434b8f;
+    --vg-brand-700: #3a4183;
+    --vg-brand-800: #2c3164;
+    --vg-brand-900: #1f2247;
+
+    /* ---- secundárias ---- */
+    --vg-rose-50: #f7f0f6;
+    --vg-rose-200: #dcc6d9;
+    --vg-rose-400: #9e7a9c;
+    --vg-rose-600: #7a5a78;
+
+    --vg-peach-50: #fbf0ed;
+    --vg-peach-200: #f0cfc6;
+    --vg-peach-400: #d69086;
+    /* AA sobre Peach 50 — corrigido de #a85c4e na replicação (UI Standard §3.1) */
+    --vg-peach-600: #9e5445;
+
+    /* ---- superfícies e texto ---- */
+    --vg-bg: #f5f5fa;
+    --vg-surface: #ffffff;
+    --vg-surface-muted: #fafafd;
+    --vg-border: #e5e5f0;
+    --vg-border-strong: #cfcfe2;
+    /* borda de campo de formulário — 3:1 contra a superfície (UI Standard §3.1/§12) */
+    --vg-border-field: #8e90ad;
+    --vg-ink: #1c1f3b;
+    --vg-ink-secondary: #494d6e;
+    --vg-muted: #6b6f8c;
+    --vg-placeholder: #9da0b8;
+    /* scrim de modais e drawers — azul-tinta da marca, não preto puro */
+    --vg-overlay: rgba(28, 31, 59, 0.42);
+
+    /* ---- estados (badges e alertas) ---- */
+    --vg-success-bg: #e4f4ee;
+    --vg-success-fg: #1f7a5c;
+    --vg-warning-bg: #fdf3e2;
+    --vg-warning-fg: #9a6410;
+    --vg-danger-bg: #fbeaec;
+    --vg-danger-fg: #b03a45;
+    --vg-info-bg: var(--vg-brand-50);
+    --vg-info-fg: var(--vg-brand-600);
+    --vg-neutral-bg: #eeeef4;
+    --vg-neutral-fg: #5a5e7a;
+
+    /* ---- assinatura visual: a fita do cartão Vegas ---- */
+    --vg-gradient: linear-gradient(
+      90deg,
+      var(--vg-brand-400) 0%,
+      var(--vg-rose-400) 52%,
+      var(--vg-peach-400) 100%
+    );
+    --vg-gradient-vertical: linear-gradient(
+      180deg,
+      var(--vg-brand-400) 0%,
+      var(--vg-rose-400) 52%,
+      var(--vg-peach-400) 100%
+    );
+
+    /* ---- forma e profundidade ---- */
+    --vg-radius-sm: 6px;
+    --vg-radius: 10px;
+    --vg-radius-lg: 14px;
+    --vg-shadow-card: 0 1px 2px rgba(28, 31, 59, 0.04);
+    --vg-shadow-raised: 0 4px 16px rgba(28, 31, 59, 0.08);
+    --vg-shadow-overlay: 0 16px 48px rgba(28, 31, 59, 0.16);
+    --vg-focus-ring: 0 0 0 3px rgba(77, 86, 161, 0.22);
+
+    /* ---- tipografia ---- */
+    --vg-font-display: var(--font-outfit), system-ui, sans-serif;
+    --vg-font-sans: var(--font-inter), system-ui, sans-serif;
+  }
+
+  body {
+    background-color: var(--vg-bg);
+    color: var(--vg-ink);
+    font-family: var(--vg-font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Valores monetários, percentuais e quantidades em tabelas alinham por dígito. */
+  .vg-numeric {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--vg-focus-ring);
+    border-radius: var(--vg-radius-sm);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Barra de progresso indeterminada com a fita da marca. */
+  @keyframes vg-slide {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(300%);
+    }
+  }
+
+  .vg-progress {
+    height: 3px;
+    overflow: hidden;
+    border-radius: var(--vg-radius-sm);
+    background: var(--vg-brand-100);
+  }
+
+  .vg-progress > span {
+    display: block;
+    height: 100%;
+    width: 33%;
+    background: var(--vg-gradient);
+    animation: vg-slide 1.2s ease-in-out infinite;
+  }
+
+  /* Conteúdo visível apenas para leitores de tela. */
+  .vg-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}

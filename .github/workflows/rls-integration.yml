@@ -1,0 +1,76 @@
+name: RLS integration
+
+# Testes de RLS contra um projeto Supabase DESCARTÁVEL de teste. São a fronteira
+# de segurança da Sprint 1 (D-018): a etapa 9 só fecha com a bateria de
+# RLS_PERMISSOES.md §6.1 e os testes de ataque de §6.2 passando.
+#
+# Não rodam no job de qualidade padrão porque exigem um banco real e usuários
+# semeados — os cinco do gate de fechamento, incluindo o de vínculo duplo.
+#
+# Cadência: SÓ sob demanda (workflow_dispatch). Sem cron de propósito — o projeto
+# Supabase gratuito PAUSA após 7 dias sem atividade, e um agendado bateria num
+# projeto pausado, falhando em vermelho por infra, não por regressão (falso
+# negativo). Rode o job à mão antes de fechar uma sprint ou após mexer em
+# migrations/RLS.
+#
+# NÃO roda em todo PR de propósito:
+#   - PRs vindos de fork não recebem secrets (política do GitHub) — o job falharia
+#     ou passaria em falso;
+#   - os testes INSEREM linhas e não há policy de delete, então o projeto de teste
+#     acumula dados a cada execução.
+#
+# Os arquivos de teste abaixo nascem na etapa 9. Enquanto não existirem, este
+# workflow não é acionado por nada automático.
+
+on:
+  workflow_dispatch: {}
+
+concurrency:
+  # Serializa as execuções: os testes compartilham o mesmo projeto de teste.
+  group: rls-integration
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  rls:
+    name: Testes de RLS (Supabase de teste)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Pré-checagem dos secrets
+        # Falha alto se não estiver configurado, em vez de passar em falso pelo
+        # skipIf dos testes. Só a URL basta como sentinela.
+        run: |
+          if [ -z "${{ secrets.SUPABASE_TEST_URL }}" ]; then
+            echo "::error::Secrets SUPABASE_TEST_* ausentes. Configure o projeto de teste antes de rodar este job."
+            exit 1
+          fi
+          echo "Secrets presentes."
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Rodar testes de RLS
+        run: >-
+          npx vitest run
+          src/lib/supabase/rls.integration.test.ts
+          src/lib/supabase/rls-escopo.integration.test.ts
+        env:
+          SUPABASE_TEST_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          SUPABASE_TEST_ANON_KEY: ${{ secrets.SUPABASE_TEST_ANON_KEY }}
+          SUPABASE_TEST_USER_EMAIL: ${{ secrets.SUPABASE_TEST_USER_EMAIL }}
+          SUPABASE_TEST_USER_PASSWORD: ${{ secrets.SUPABASE_TEST_USER_PASSWORD }}
+          SUPABASE_TEST_ADMIN_EMAIL: ${{ secrets.SUPABASE_TEST_ADMIN_EMAIL }}
+          SUPABASE_TEST_ADMIN_PASSWORD: ${{ secrets.SUPABASE_TEST_ADMIN_PASSWORD }}

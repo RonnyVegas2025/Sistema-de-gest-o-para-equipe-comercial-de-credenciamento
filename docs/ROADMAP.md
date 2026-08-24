@@ -86,7 +86,30 @@ Se a bateria não passar, **não se avança para `companies`**. Detalhamento em
 
 ## Sprint 2 · Estabelecimentos, CNPJ e contatos
 
-Migrations `0010`–`0012`.
+Migrations `0012`–`0014`. *(Renumeradas: a Sprint 1 consumiu `0010` e `0011` com
+as correções da parada obrigatória de revisão — ver `MODELO_DADOS.md` §8.)*
+
+### Regra de aceite inegociável — RLS com recorte na mesma migration
+
+**Nenhuma tabela `crm_*` é criada sem a sua policy com recorte na mesma
+migration.** Não em migration seguinte, não "depois que a tela existir". Se a
+tabela nasce, a policy nasce junto — e o script de verificação daquela migration
+confere que o recorte está lá:
+
+```sql
+using (responsible_seller_id in (select public.scoped_seller_ids()))
+```
+
+**Por que isto é regra e não recomendação.** A Sprint 1 entregou
+`scoped_seller_ids()` provada, mas sem nenhuma tabela onde prendê-la — as cinco
+de `RLS_PERMISSOES.md` §5.3 nascem aqui. Isso deixa D-018 **meio cumprida**: a
+função está provada, o *enforcement* não.
+
+É a situação exata que produziu o DE-025 no sistema de origem, onde uma leitura
+ampla "provisória" seguiu aberta três sprints. Lá também a intenção existia; o
+que faltou foi o momento em que a dívida se tornava visível. Esta regra é esse
+momento: a migration não passa na verificação sem o recorte.
+
 
 - `companies` com campos de consulta de CNPJ e coordenadas
 - Contrato `CnpjProvider` em `src/services/cnpj/`, com implementação manual como
@@ -100,10 +123,13 @@ Migrations `0010`–`0012`.
 
 ## Sprint 3 · Carteiras e importação
 
-Migration `0013`.
+Migration `0015`.
 
 - `crm_portfolios`, `crm_portfolio_companies`, `crm_assignment_history`
-- Motor de importação copiado (`types`, `engine`, `csv`, `xlsx`, `grid`)
+- ~~Motor de importação copiado~~ — **entregue na Sprint 1, etapa 7**
+  (`types`, `engine`, `csv`, `xlsx`, `grid`, `norm`, `dates`)
+- **Telas de importação**, incluindo a de estrutura comercial, adiada da
+  Sprint 1 para preservar o "nenhuma tela comercial" da parada de revisão
 - Spec de importação de carteira, com prévia obrigatória
 - Distribuição e reatribuição com histórico (D-006)
 - Minha Carteira, com filtros e layout de tablet

@@ -6,7 +6,7 @@
 > alicerce. Depois que isso estiver certo, as telas comerciais andam rápido.
 > Errado, contamina tudo que vier depois.
 
-Fontes canônicas: `DECISOES.md` (D-001 a D-026) · `MODELO_DADOS.md` ·
+Fontes canônicas: `DECISOES.md` (D-001 a D-034) · `MODELO_DADOS.md` ·
 `RLS_PERMISSOES.md` · `DIVERGENCIAS_BASE.md`.
 
 **Repositório-base de referência:** branch
@@ -46,10 +46,11 @@ são scaffolding descartável: crescem na etapa 2, quando o layout recebe
 ## 2 · Next.js, Tailwind, tokens e shell Vegas
 
 - `tokens.css`, `tailwind.config.ts`, `brand.ts`, `public/brand/*`
-- 28 componentes de `src/components/ui/` (lista em `DIAGNOSTICO_SPRINT_0.md` §4)
-- `app-shell`, `sidebar` (248/72 px), `topbar` (64 px), `breadcrumb`,
-  `page-header`, `mobile-nav`
-- `app/dev/componentes` — catálogo vivo, 404 em produção
+- 28 componentes de `src/components/ui/` — a lista é o próprio
+  `src/components/ui/` da branch de referência
+- `breadcrumb` e `page-header` (ambos vivem em `ui/` e não dependem de sessão)
+- `app/dev/componentes` — catálogo vivo, 404 em produção, com gate de ambiente
+  fail-closed
 - `docs/IDENTIDADE_VISUAL.md`, adaptado do equivalente na branch de referência,
   documentando os tokens **como efetivamente copiados**, com as cinco correções
   da §3.1 do UI Standard já aplicadas. Descreve o que existe, não o que se
@@ -65,16 +66,25 @@ São defeitos conhecidos do sistema de origem; copiar sem corrigir é replicá-l
 5. sem espelho manual de token — `tokens.css` é a fonte, e a sincronia com
    `brand.ts`/JSON vira **teste**, não convenção
 
-**Auditoria de alvo touch de 44 px** (UI Standard §19) nos componentes copiados:
+**Auditoria de alvo touch** (UI Standard §19) nos componentes copiados:
 `button`, `input`, `select`, `checkbox` e linhas de tabela. O sistema de origem
 foi construído para desktop administrativo; o CRM roda em tablet no campo.
 Antecipada da Sprint 6 para cá — corrigir na cópia custa uma fração de corrigir
-depois em todas as telas.
+depois em todas as telas. O alvo é **responsivo**: 44 px na base, densidade
+compacta a partir de `lg:` (D-027).
 
 Não trazer `costs/cost-rule-card` nem páginas de negócio de Agregados.
 
+**O shell não entra nesta etapa.** `app-shell`, `shell-chrome`, `sidebar`,
+`sidebar-nav`, `topbar`, `mobile-nav` e `user-menu` dependem de
+`@/lib/auth/session`, `@/config/navigation` e `@/types/database` — que nascem nas
+etapas 4 e 6. Copiá-los aqui exigiria stubs, e stub criado para destravar etapa
+sobrevive e apodrece. Migram para a etapa 4, junto com `navigation.ts`.
+
 *Aceite:* catálogo de componentes renderiza; nenhum hexadecimal fora de
-`tokens.css` (lint); as cinco correções aplicadas; contraste AA verificado.
+`tokens.css`, salvo o espelho de `brand.ts` coberto por teste; as cinco correções
+aplicadas; contraste AA verificado por cálculo; `docs/IDENTIDADE_VISUAL.md`
+descrevendo o que ficou.
 
 ## 3 · Supabase e ambientes
 
@@ -93,6 +103,16 @@ Copiar: Edge Function `admin-create-user`, `lib/supabase/{client,server,middlewa
 `lib/auth/session.ts`, `lib/auth/profile-header.ts`, `middleware.ts`, telas de
 login, esqueci-senha, nova-senha e trocar-senha.
 
+**Vindo da etapa 2**, agora que as dependências existem:
+
+- o shell — `app-shell`, `shell-chrome`, `sidebar` (248/72 px), `sidebar-nav`,
+  `topbar` (64 px), `mobile-nav`, `user-menu`;
+- `src/config/navigation.ts`, com as chaves de módulo desta sprint;
+- `src/app/page.tsx` passa a redirecionar para `/inicio`, que só existe sob o
+  layout autenticado de `(app)`;
+- a segunda barreira de `/dev` — sessão mais perfil administrador — sobre o gate
+  de ambiente que a etapa 2 deixou pronto.
+
 Adaptar apenas: nome do sistema, texto institucional, `PUBLIC_PREFIXES`.
 
 **Dois detalhes que não sobrevivem a uma reescrita descuidada:**
@@ -103,11 +123,29 @@ Adaptar apenas: nome do sistema, texto institucional, `PUBLIC_PREFIXES`.
    setar o validado (D-019). O `delete` precede o `set`.
 
 *Aceite:* login, troca obrigatória de senha, bloqueio de usuário desativado em
-meio a sessão, e o teste de header forjado de `RLS_PERMISSOES.md` §6.3.
+meio a sessão, e o teste de header forjado de `RLS_PERMISSOES.md` §6.3. Mais:
+**eliminar as 9 ocorrências restantes de `text-ink-muted` nos componentes de
+shell** — `ink.muted` já saiu do Tailwind na etapa 2, então elas quebram o build
+na chegada. `ink-secondary` para prosa subordinada, `muted` para metadado e
+adorno, como na etapa 2.
 
 ## 5 · Sequência própria de migrations
 
 O CRM inicia sua numeração em `0001`. Não copiar migrations em bloco.
+
+**Como as migrations são aplicadas (D-031).** Pelo **SQL Editor do painel**, não
+por `db push`. O banco não guarda histórico; `supabase/migrations/` é a única
+fonte da ordem aplicada. Cada migration vem acompanhada de um script de
+verificação em `supabase/checks/`, somente leitura, cuja saída é o que prova que
+a aplicação ficou correta.
+
+Ciclo por migration:
+
+```
+agente escreve e commita  →  operador cola no SQL Editor  →  cola a saída
+  →  operador roda o script de verificação  →  cola a saída
+  →  agente valida contra MODELO_DADOS.md  →  próxima
+```
 
 Regras permanentes (D-021): **uma migration por vez**, aplicada e validada antes
 da próxima. Não agrupar para ganhar tempo — o tempo economizado ali é cobrado
@@ -140,6 +178,18 @@ pode não ter conta de acesso.
 equipe (`seller.team_id → team.current_manager_id`). Coluna própria divergiria na
 primeira troca de gestor.
 
+**Ordem de habilitação, confirmada.** Depois da `0001` e antes da etapa 9:
+
+```
+0001 aplicada  →  implantar a Edge Function admin-create-user
+   →  criar os cinco usuários reais do gate de fechamento
+   →  etapa 9
+```
+
+A Edge Function escreve em `profiles`, então não funciona antes da `0001`. E os
+cinco usuários do gate nascem por ela — não há outro caminho de criação, já que
+o cadastro público está desligado (D-009). A Vercel fica para depois da etapa 9.
+
 *Aceite:* CRUD das quatro entidades; ficha do gestor lista **todas** as equipes
 que ele gerencia, não uma equipe de pertencimento (bug DE-040 da origem).
 
@@ -164,8 +214,42 @@ Spec própria de estrutura comercial, adaptada de `import/sellers.ts`:
 
 Prévia obrigatória. Nada gravado antes da confirmação.
 
+**Sem tela nesta sprint.** A tela de importação de estrutura comercial entra na
+**Sprint 3**, junto com as demais telas de importação. O ponto de revisão após a
+etapa 9 descreve o estado como "ainda não existe nenhuma tela comercial", e uma
+tela de importação é uma tela comercial — preservá-lo vale mais do que antecipar
+a interface. Até lá a carga roda por chamada direta das Server Actions, por quem
+opera o projeto, não pelo usuário final.
+
+**Quatro specs, num arquivo, nesta ordem:** `directors → managers → teams →
+sellers`. Cada uma referencia a anterior, e o `resolve` não cria referência
+ausente — importar consultores antes das equipes produz erro de linha, nunca
+equipe inventada.
+
 *Aceite:* importar o mesmo arquivo duas vezes não duplica nada; renomear uma
 pessoa na origem e reimportar **atualiza**, não cria.
+
+> **A etapa 7 entrega o MECANISMO, não os DADOS.**
+>
+> A carga real da estrutura comercial **não acontece nesta sprint**. Ela depende
+> de uma exportação do Painel ADM que inclua a coluna `id` de cada linha — o
+> `source_ref` — e essa exportação ainda não foi feita: é trabalho no outro
+> repositório, congelado durante esta sprint.
+>
+> Ao revisar, não confundir as duas coisas:
+>
+> ```
+> importação pronta            ✓ entregue na etapa 7
+> estrutura comercial carregada ✗ pendente da exportação do Painel
+> ```
+>
+> Consequência prática: ao fim da sprint, `directors`, `managers`, `teams` e
+> `sellers` estarão vazias ou com dados de teste. O **gate de cinco usuários** da
+> etapa 9 precisa de vínculos reais nessas tabelas, então as linhas dele são
+> criadas à mão, não importadas.
+>
+> Quando a exportação existir e o formato divergir dos cabeçalhos propostos, o
+> ajuste é na spec, não no motor.
 
 ## 8 · Trilha cadastral e auditoria
 
@@ -222,8 +306,30 @@ Estado "sem vínculo" tem tela dedicada: *"Seu usuário ainda não está vincula
 um consultor. Procure o gestor."* Zero linhas por falta de vínculo é
 indistinguível de zero linhas por falta de dados.
 
-*Aceite:* todos os cenários de §6.1 e §6.2 passando, incluindo o gate de cinco
-usuários abaixo.
+> **"As policies com recorte" não têm onde ser presas nesta sprint.**
+>
+> As cinco tabelas que recebem o recorte — `crm_company_relationships`,
+> `crm_opportunities`, `crm_activities`, `crm_tasks`,
+> `crm_portfolio_companies` (`RLS_PERMISSOES.md` §5.3) — nascem da Sprint 2 em
+> diante. Nenhuma existe hoje.
+>
+> A `0009` entrega, portanto, **as funções e nenhuma policy**. Isso não é adiar
+> o recorte; é o oposto. D-018 exige que o escopo exista e esteja provado
+> **antes** da primeira tela comercial, para não repetir o DE-025 da origem. A
+> função nasce pronta e testada; a Sprint 2 só a pendura:
+>
+> ```sql
+> using (responsible_seller_id in (select public.scoped_seller_ids()))
+> ```
+>
+> O que prova a função nesta sprint é o **gate de cinco usuários**, que a chama
+> diretamente sob cada vínculo — não a aplicação dela numa tabela.
+
+*Aceite:* os cenários de §6.2 passando (feito na etapa 8, sobre a trilha) e o
+gate de cinco usuários abaixo. Os cenários de §6.1 que dependem de carteira,
+oportunidade, atividade e contato **não são verificáveis nesta sprint** — as
+tabelas não existem. Eles entram na definição de pronto da Sprint 2, quando as
+policies com recorte forem presas.
 
 ## 10 · Verificação
 
@@ -295,6 +401,49 @@ Rossi como diretor e gestor, Danilo como gestor e vendedor.
 Verificar para cada um: leitura permitida, leitura negada fora do escopo,
 escrita, tentativa de reatribuição fora do escopo, e o caso de usuário sem
 vínculo.
+
+---
+
+# O que a Sprint 2 herda como aceite
+
+### Regra de aceite inegociável — RLS com recorte na mesma migration
+
+**Nenhuma tabela `crm_*` é criada sem a sua policy com recorte na mesma
+migration.** Não em migration seguinte, não "depois que a tela existir". Se a
+tabela nasce, a policy nasce junto — e o script de verificação daquela migration
+confere que o recorte está lá:
+
+```sql
+using (responsible_seller_id in (select public.scoped_seller_ids()))
+```
+
+**Por que isto é regra e não recomendação.** A Sprint 1 entregou
+`scoped_seller_ids()` provada, mas sem nenhuma tabela onde prendê-la — as cinco
+de `RLS_PERMISSOES.md` §5.3 nascem aqui. Isso deixa D-018 **meio cumprida**: a
+função está provada, o *enforcement* não.
+
+É a situação exata que produziu o DE-025 no sistema de origem, onde uma leitura
+ampla "provisória" seguiu aberta três sprints. Lá também a intenção existia; o
+que faltou foi o momento em que a dívida se tornava visível. Esta regra é esse
+momento: a migration não passa na verificação sem o recorte.
+
+A Sprint 1 entrega **a função**; a Sprint 2 entrega **a aplicação**. A regra
+acima é a garantia de que a segunda metade não fica pendurada — ver a emenda a
+D-018 em `docs/DECISOES.md`.
+
+---
+
+# Fechamento: o gate contra o banco real
+
+As etapas 1 a 11 terminam com `npm run verify` limpo e as onze migrations
+verificadas — mas **a sprint não fecha aí**. Ela fecha contra o banco real.
+
+O roteiro de execução no painel está em **`docs/sprints/SPRINT-1-GATE.md`**:
+deploy da Edge Function, criação dos cinco usuários, seed da estrutura comercial
+(`supabase/seed/gate_estrutura.sql`) e o gate propriamente dito
+(`supabase/checks/GATE_painel.sql`, versão de uma colagem só para o SQL Editor).
+
+O PR da Sprint 1 só é aberto depois de as oito linhas do gate voltarem `OK`.
 
 ---
 

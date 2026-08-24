@@ -31,15 +31,15 @@ docs/RLS_PERMISSOES.md           matriz de papéis e resolução de escopo
 docs/VEGAS-PLATFORM-UI-STANDARD.md    fonte normativa visual
 docs/ROADMAP.md                  sequenciamento das sprints
 docs/DIVERGENCIAS_BASE.md        o que não copiar do sistema de origem
-docs/ARQUITETURA.md              ler quando existir
+docs/ARQUITETURA.md              o que ficou implementado (A-006)
 ```
 
 **Durante a Sprint 1, `docs/sprints/SPRINT-1.md` é o documento mais importante**
 — é a ordem de execução autorizada, com critério de aceite por etapa.
 
-`ARQUITETURA.md` **ainda não existe**: ele é produzido na última etapa da Sprint
-1 (A-006), descrevendo o que ficou implementado. Não é pré-requisito de leitura
-até lá, e não deve ser escrito antes.
+`ARQUITETURA.md` foi produzido na última etapa da Sprint 1 (A-006). Ele descreve
+**o que ficou implementado**, e suas §9 e §11 são as mais importantes: o que não
+existe apesar de parecer, e o que nunca rodou contra ambiente real.
 
 ---
 
@@ -95,6 +95,10 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
 
 **Segurança**
 
+- **Teste que protege fronteira de segurança é validado por mutação.** Escrever
+  o teste, quebrar o código de propósito, confirmar que reprova, restaurar.
+  Sem isso o teste é uma afirmação, não uma garantia — e teste de segurança que
+  passa por vacuidade é pior que teste nenhum, porque cria confiança.
 - A RLS é a fronteira real. Menu e guarda de rota são conveniência.
 - Nunca relaxar RLS para fazer uma tela funcionar.
 - Service role apenas em Edge Function. Nunca no frontend, nunca com prefixo
@@ -129,6 +133,9 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
 - Toda função de trilha: `security definer` + `set search_path = public` +
   `revoke execute from public, authenticated`. **Uma por entidade** — gravador
   genérico de histórico anula a imutabilidade.
+- **`from public, authenticated` são os dois, não um.** Revogar só de
+  `authenticated` é inócuo: o grant implícito de `PUBLIC` sustenta o privilégio,
+  e nada dá sinal — a trilha continua gravando. Ver `RLS_PERMISSOES.md` §5.6.
 
 **Visual**
 
@@ -138,8 +145,9 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
 - Gradiente Vegas é assinatura discreta — linha superior, item ativo, progresso.
   Nunca fundo de card, botão primário, KPI ou grande área colorida.
 - Outfit para títulos e KPIs; Inter para formulários, tabelas e navegação.
-- Alvo touch mínimo de 44 px. Label sempre visível; placeholder não substitui
-  label. Não empilhar modais.
+- Alvo touch mínimo de 44 px em telas de toque; densidade compacta a partir de
+  `lg:` (D-027). Label sempre visível; placeholder não substitui label. Não
+  empilhar modais.
 
 **Dados**
 

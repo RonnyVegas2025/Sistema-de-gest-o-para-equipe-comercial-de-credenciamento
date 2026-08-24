@@ -10,7 +10,7 @@
 | Sistema | CRM Comercial de Credenciamento Vegas |
 | Base técnica | Painel ADM de Produtos Agregados, branch `sprint-3/relatorios-e-estrutura-comercial` |
 | Estado | Sprint 0 — documentação aprovada, implementação não iniciada |
-| Decisões fechadas | D-001 a D-026 |
+| Decisões fechadas | D-001 a D-034 |
 
 ---
 
@@ -392,6 +392,35 @@ opcional.
 
 ---
 
+### Emenda — a Sprint 1 entrega a função, a Sprint 2 entrega o enforcement
+
+A Sprint 1 entregou `scoped_seller_ids()` provada por mutação, **mas sem nenhuma
+tabela onde prendê-la**: as cinco de `RLS_PERMISSOES.md` §5.3 —
+`crm_company_relationships`, `crm_opportunities`, `crm_activities`, `crm_tasks`,
+`crm_portfolio_companies` — nascem da Sprint 2 em diante.
+
+Isso deixa D-018 **meio cumprida**. A função está provada; o enforcement não. E
+essa é exatamente a situação que produziu o DE-025 no sistema de origem: lá a
+intenção também existia, e a leitura ampla "provisória" seguiu aberta três
+sprints. O que faltou não foi decisão — foi um momento em que a dívida se
+tornasse visível.
+
+**Regra de aceite da Sprint 2, para criar esse momento:**
+
+> Nenhuma tabela `crm_*` é criada sem a sua policy com recorte **na mesma
+> migration**. Não em migration seguinte, não "depois que a tela existir". Se a
+> tabela nasce, a policy nasce junto — e o script de verificação daquela
+> migration confere que o recorte está lá.
+
+A verificação é o que torna a regra executável: uma tabela sem recorte não passa,
+e a falha aparece no momento em que a tabela é criada, não numa auditoria três
+sprints depois.
+
+Registrada em `SPRINT-1.md` (seção "O que a Sprint 2 herda como aceite") e em
+`ROADMAP.md`, na Sprint 2.
+
+---
+
 ## D-019 — `x-user-profile` só com remoção do header forjado
 
 **Contexto.** DE-038 do sistema de origem elimina a duplicação de `getUser` e da
@@ -597,8 +626,31 @@ carrega:
 ```
 inactivated_at      timestamptz
 inactivated_by      uuid → profiles(id)
-inactivation_reason text
+inactivation_reason text          -- por que este registro está inativo
+reactivation_reason text          -- por que foi devolvido à circulação
 ```
+
+**Emenda — os dois motivos ficam em colunas SEPARADAS.** A redação original
+exigia motivo nos dois sentidos sem dizer onde ele mora, e a primeira
+implementação reusou `inactivation_reason` para ambos, transformando-a em
+"motivo da transição mais recente".
+
+Isso é ambíguo por construção. A coluna precisa responder **por que este
+registro está inativo** — não o que aconteceu por último. Depois de uma
+reativação, um campo único passaria a explicar por que o registro está ATIVO,
+enquanto o nome promete o contrário; e quem lesse `inactivation_reason` de um
+registro reativado receberia a informação errada sem nenhum sinal disso.
+
+A trilha em `crm_record_status_history` já guarda os dois eventos com seus
+motivos próprios em `reason`. As colunas na entidade são o estado corrente:
+
+| Coluna | Preenchida em | Limpa em |
+| --- | --- | --- |
+| `inactivation_reason` | `ativo → inativo` | — permanece, é o histórico do estado |
+| `reactivation_reason` | `inativo → ativo` | `ativo → inativo` |
+| `inactivated_at` / `_by` | `ativo → inativo`, pelo banco | `inativo → ativo` |
+
+Migration `0010`. A `0008` não é editada (D-021).
 
 **Divisão de responsabilidade.** O motivo é texto que só o operador conhece; o
 banco não tem como inventá-lo.
@@ -699,6 +751,246 @@ mensagem correspondente mapeada por nome:
 O mapeamento é **por nome de constraint**, não por texto da mensagem do
 Postgres — o texto muda entre versões, o nome não. Constraint sem tradução cai
 em mensagem genérica e vira item de correção, nunca motivo para relaxar a regra.
+
+---
+
+## D-027 — Alvo de toque responsivo
+
+**Contexto.** A biblioteca copiada foi dimensionada para desktop administrativo:
+`button` em 32/40 px, `input` e `select` em 40 px, `checkbox` em 16 px, célula de
+tabela com `py-2`. Nenhum controle atinge 44 px. O CRM roda em **tablet no
+campo**, e alvo pequeno em tela de toque é erro de operação, não de estética.
+
+Ao aplicar a regra, as fontes divergem no alcance:
+
+- O `VEGAS-PLATFORM-UI-STANDARD.md` qualifica três vezes — §12 "alvos de toque
+  mínimos de 44 px **no mobile**", §19 "Mobile em campo → botões 44 px", §20
+  "tamanho de toque mínimo de 44 px **no mobile**";
+- a mesma §19 lista **densidade e produtividade** como prioridade do desktop
+  administrativo — sidebar, tabelas, filtros e múltiplas colunas;
+- o `CLAUDE.md` afirmava sem qualificar: "alvo touch mínimo de 44 px".
+
+**Decisão.** Alvo de toque **responsivo**: 44 px na base, densidade compacta a
+partir de `lg:`.
+
+```
+button   h-11 lg:h-8  (sm)   ·   h-11 lg:h-10 (md)
+campos   h-11 lg:h-10
+tabela   py-3 lg:py-2
+```
+
+As duas exigências da §19 são reais e conflitantes: 44 px fixo em tudo atenderia
+o tablet e custaria densidade em toda tela de desktop, contra a própria §19. O
+responsivo atende as duas linhas da tabela sem escolher entre elas.
+
+**Checkbox.** O quadrado permanece em 16 px — inflá-lo para 44 px destoaria de
+qualquer formulário e não é o que a regra pede. A área de toque vem do **padding
+do rótulo** (`min-h-11 py-3`, revertido em `lg:`). O alvo clicável cresce; o
+desenho não muda.
+
+**Divergência corrigida na origem.** O `CLAUDE.md` é resumo; o UI Standard é
+fonte normativa. Quando resumo e fonte divergem, a fonte vence — e o resumo é
+corrigido, não mantido. A linha do `CLAUDE.md` passou a "alvo touch mínimo de
+44 px em telas de toque; densidade compacta a partir de `lg:`".
+
+**Consequências.** Todo controle novo nasce com o par base/`lg:`. Componente que
+declare só a altura compacta reprova a auditoria de toque. `conformidade.test.tsx`
+trava o padrão em `button`, `input` e `select`.
+
+---
+
+## D-028 — CLI do Supabase fixado no projeto
+
+**Contexto.** Os scripts de banco herdados da origem (`db:types`, `db:reset`)
+assumiam um `supabase` instalado globalmente na máquina do desenvolvedor. O
+repositório não declarava a ferramenta em lugar nenhum: quem clonasse sem o CLI
+global veria os scripts falharem, e quem tivesse uma versão diferente rodaria
+outra ferramenta com o mesmo nome.
+
+**Decisão.** `supabase` entra como **devDependency com versão exata** —
+`"supabase": "2.115.0"`, sem `^`. Fica no `package-lock.json` e é a mesma
+ferramenta em qualquer máquina e no CI.
+
+**Motivo.** Versão no lock significa mesmo comportamento em toda máquina e no
+CI. Migration que passa numa máquina e falha noutra por diferença de CLI é
+exatamente a classe de problema que **D-021** existe para evitar — não faz
+sentido disciplinar a ordem das migrations e deixar flutuando a ferramenta que
+as aplica. Os ~50 MB do binário são baratos perto de um diagnóstico perdido
+nisso.
+
+**Sem intervalo de versão.** `^` permitiria que uma minor nova entrasse num
+`npm ci` e mudasse a geração de tipos ou o comportamento de `db push` sem
+ninguém ter decidido. Atualização de CLI passa a ser mudança explícita, com
+teste, como qualquer outra dependência.
+
+**Alternativa descartada.** Instalação global documentada no README: não
+acrescenta pacote ao repositório, mas devolve a variação entre máquinas e deixa
+o CI sem a ferramenta — `db:lint` nunca poderia rodar lá.
+
+**Consequências.** `npm ci` passa a baixar o binário. Os scripts `db:*` resolvem
+pelo `node_modules/.bin` sem `npx` remoto. `supabase start` continua exigindo
+Docker e segue opcional (D-001: o desenvolvimento pode apontar direto para o
+projeto hospedado).
+
+---
+
+## D-029 — Saneamento de `x-user-profile` no topo do middleware
+
+**Contexto.** D-019 estabelece que o middleware remove qualquer `x-user-profile`
+vindo do cliente **antes** de setar o validado, e chama a verificação de
+obrigatória. A implementação do sistema de origem faz o `delete` **dentro de um
+ramo só** — o de rota protegida com sessão. Os demais caminhos retornam antes:
+
+| Caminho | Header do cliente |
+| --- | --- |
+| sem sessão, rota pública | **passa** |
+| com sessão, rota pública | **passa** |
+| com sessão, rota protegida | removido |
+
+E `getSessionProfile()` confia no header sem condição quando ele existe — só cai
+para o `getUser` real quando o header falta.
+
+`/dev` é rota pública no middleware, e o layout do segmento exige perfil
+`administrador`. Na origem, portanto, uma requisição a `/dev` com header forjado
+atravessa o gate de administrador. O estrago lá é pequeno — o catálogo não
+carrega dado —, mas é o caminho de escalonamento que D-019 nomeia, e o padrão
+seria herdado por qualquer rota pública futura que leia perfil.
+
+**Decisão.** O `delete` sobe para o **topo** de `src/middleware.ts` e vale para
+**toda** requisição, antes de qualquer decisão de rota. Os headers saneados são
+passados a `updateSession()`, que constrói com eles todo `NextResponse.next` —
+inclusive os dos caminhos que retornam cedo. Nenhum ramo devolve header vindo do
+cliente.
+
+O saneamento acontece **antes** de o cliente Supabase existir, então não
+interfere na regra de não haver lógica entre `createServerClient` e `getUser()`
+— de que depende a renovação do token.
+
+**Verificação.** `src/middleware.test.ts` nasce no mesmo commit que o código, com
+os casos de rota protegida, **rota pública** e ausência de sessão. Foi validado
+por mutação: revertido o middleware ao padrão da origem, três testes reprovam,
+incluindo o de rota pública. A verificação obrigatória de D-019 **nunca existiu
+na origem** — nenhum dos 29 arquivos de teste da branch de referência cobre §6.3.
+
+**Consequência.** O gate de administrador de `/dev` passa a ser real mesmo sendo
+`/dev` rota pública no middleware. Rota pública nova que leia perfil nasce
+protegida por construção, não por lembrança.
+
+---
+
+## D-030 — Sem `serverEnv()`: a service role não é lida pelo runtime do Next
+
+**Contexto.** O `src/lib/env.ts` da origem expõe `publicEnv` e um `serverEnv()`
+que valida `SUPABASE_SERVICE_ROLE_KEY`. **Nenhum arquivo o chama** — nem na
+origem, nem aqui.
+
+**Decisão.** `serverEnv()` e o schema de servidor não são replicados. `env.ts`
+expõe apenas `publicEnv`.
+
+**Motivo.** No CRM a service role vive num único lugar: os secrets da Edge
+Function, onde `admin-create-user` a lê. Um schema no runtime do Next que a
+exigisse seria código morto convidando alguém a definir a variável na Vercel
+para "o schema parar de reclamar" — colocando a chave exatamente onde o desenho
+diz que ela não deve estar.
+
+**Consequência verificável.** Depois da remoção, a string
+`SUPABASE_SERVICE_ROLE_KEY` não aparece em `.next/static` **nem em
+`.next/server`**. A etapa do CI que varre o bundle client continua valendo como
+rede de segurança; o desenho é a chave nunca chegar perto.
+
+---
+
+## D-031 — Migrations aplicadas pelo SQL Editor
+
+**Contexto.** Quem opera o projeto trabalha pelo GitHub web e pelo painel do
+Supabase: não há repositório clonado nem CLI. O agente que escreve o SQL não
+alcança o Supabase — a política de rede do ambiente recusa a conexão antes de
+qualquer autenticação. Nenhum dos dois lados pode rodar `supabase db push`.
+
+**Decisão.** As migrations são aplicadas **colando o arquivo no SQL Editor** do
+painel. `db push` não é usado — nunca, nem no futuro próximo.
+
+**Consequência, escrita porque é a parte que morde.** O banco **não conhece o
+histórico de migrations**. A tabela `supabase_migrations.schema_migrations`,
+que o CLI usa como registro do que já foi aplicado, permanece vazia. Portanto:
+
+- **O repositório é a única fonte da ordem aplicada.** `supabase/migrations/` em
+  ordem numérica é o registro; não existe segunda fonte para conferir.
+- `supabase migration list --linked` reportaria "nada aplicado" mesmo com o banco
+  inteiro construído. É informação enganosa, não incompleta.
+- Um `db push` futuro tentaria reaplicar **tudo desde a 0001**.
+
+**Migração para CLI, se um dia acontecer.** `supabase migration repair
+--status applied <versão>` marca cada versão como aplicada sem reexecutá-la,
+reconstruindo o histórico a partir do repositório. É o caminho previsto; não
+improvisar outro.
+
+**Scripts removidos do `package.json`.** `db:push`, `db:push:dry` e `db:status`
+saíram. Atalho que contradiz a decisão é convite a usá-lo por engano, e
+`db:status` seria pior que inútil: reportaria banco vazio com convicção.
+
+**O que substitui a confirmação do `db push`.** Cada migration vem com um script
+de verificação em `supabase/checks/`, somente leitura, que lê o catálogo do
+Postgres e compara com o modelo — colunas, tipos, defaults, constraints, índices,
+`security definer`, `search_path`, triggers, RLS e policies. "Apliquei" vira
+"apliquei e aqui está a prova".
+
+---
+
+## D-032 — Diretório restrito de usuários para vínculo
+
+**Contexto.** `profiles_select` permite leitura apenas da própria linha e do
+administrador (`RLS_PERMISSOES.md` §5.1). Mas os formulários de diretor, gestor
+e vendedor permitem vincular a pessoa a um usuário existente (`profile_id`), e
+quem escreve neles é `gestor_adm` além do administrador. Com a policy atual, o
+gestor não enxerga a lista para escolher.
+
+**Decisão.** Uma **view restrita** expondo apenas `id` e `full_name` dos perfis
+ativos, para preencher o select de vínculo. A policy de `profiles` **não** é
+alargada.
+
+**Motivo.** Alargar daria ao gestor `role`, `is_active` e o e-mail de todos os
+usuários, quando ele precisa apenas de um nome e um id. A capability §3 dá
+`usuarios.read` só ao administrador; a view atende a necessidade real sem
+contrariar a matriz.
+
+**Cuidado obrigatório, a documentar no cabeçalho da view.** View sobre tabela com
+RLS é `security definer` na prática: ela roda com os privilégios de quem a criou,
+**ignora a RLS da tabela base**, e o `WHERE` dela passa a ser a única barreira. O
+linter do Supabase vai apontar — é o mecanismo, não um defeito. Documentar a
+exceção, não "corrigir".
+
+Consequência: a view não pode ganhar coluna nova sem revisar o que ela expõe.
+Acrescentar `email` ali seria alargar a leitura sem tocar em policy nenhuma.
+
+---
+
+## D-033 — `reactivation_reason` em coluna própria
+
+Ver a emenda em D-025. Resumo: os motivos de inativação e de reativação vivem em
+colunas separadas, porque uma coluna única deixa de responder "por que este
+registro está inativo" no instante em que ele é reativado. Migration `0010`.
+
+---
+
+## D-034 — FKs de vínculo sem ação de delete
+
+**Contexto.** As FKs de `profile_id`, `created_by` e `updated_by` nas entidades
+da estrutura comercial não declaram ação de delete, então vale `NO ACTION`.
+Consequência observada em teste: com um diretor vinculado a um perfil, apagar
+aquele usuário no painel de Auth do Supabase é **bloqueado**, com erro de FK
+citando `directors`.
+
+**Decisão.** Mantido `NO ACTION`.
+
+**Motivo.** O CRM não apaga usuário — saída de circulação é `is_active = false`.
+O bloqueio recusa uma operação que o sistema não sanciona, e falhar alto é melhor
+que desvincular em silêncio: `on delete set null` deixaria o cadastro comercial
+apontando para o vazio sem nenhum registro de que houve um vínculo.
+
+**Consequência.** Quem precisar apagar um usuário de teste no painel vai receber
+um erro de FK que não explica o contexto. É o custo aceito; a alternativa custa
+mais.
 
 ---
 
