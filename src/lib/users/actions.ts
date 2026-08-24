@@ -7,6 +7,7 @@ import { requireProfile } from '@/lib/auth/session'
 import { canWrite } from '@/lib/permissions/can'
 import {
   criarUsuarioSchema,
+  definirAcessoSchema,
   regenerarSenhaSchema,
 } from '@/lib/validations/users'
 
@@ -175,5 +176,86 @@ export async function regenerarSenha(
     ok: true,
     password: data.password,
     email: String(formData.get('email') ?? ''),
+  }
+}
+
+export type AcessoState =
+  | { ok: true; mensagem: string }
+  | { ok: false; error: string }
+  | Record<string, never>
+
+/**
+ * Liga e desliga o acesso de um usuário — `profiles.is_active`.
+ *
+ * Por D-036 isto é **encerramento operacional**, não inativação: a pessoa saiu
+ * ou perdeu o acesso, e o registro continua válido. Ela permanece resolvível
+ * como autora das linhas que criou e em `inactivated_by` / `ended_by`. Reativar
+ * é operação normal e não passa pelo rito de D-025, escrito para reverter erro
+ * de cadastro.
+ *
+ * Não usa Edge Function: não precisa de service role. É `UPDATE` em `profiles`,
+ * e a RLS já restringe quem escreve.
+ *
+ * **Recebe o estado alvo, não um "alternar".** Um toggle decide a partir do que
+ * a tela acredita; com a lista desatualizada — outra aba, outro administrador —
+ * ele inverte o valor errado. `ativo: false` significa *deixe desativado*, e é
+ * idempotente.
+ */
+export async function definirAcesso(
+  _prevState: AcessoState,
+  formData: FormData,
+): Promise<AcessoState> {
+  const profile = await requireProfile()
+
+  // `canWrite` e não `canInactivate`: por D-036 esta ação não é inativação.
+  // Hoje as duas capacidades resolvem para administrador, então a escolha não
+  // muda comportamento — muda o que o código afirma estar fazendo.
+  if (!canWrite(profile.role, 'usuarios')) {
+    return { ok: false, error: MENSAGENS.forbidden! }
+  }
+
+  const parsed = definirAcessoSchema.safeParse({
+    userId: formData.get('userId'),
+    ativo: formData.get('ativo'),
+  })
+  if (!parsed.success) {
+    return { ok: false, error: 'Usuário inválido.' }
+  }
+
+  // ──────────────────────────────────────────────────────────────────────
+  // O administrador não desativa a si mesmo.
+  //
+  // É o caminho mais rápido para o projeto perder o acesso administrativo: a
+  // recuperação seria pelo painel de Auth, à mão. A tela também esconde a ação
+  // na própria linha, mas **esconder botão não é autorizar** — quem chama a
+  // action direto não vê botão nenhum. Mesma lógica de D-019 e da camada 3b.
+  //
+  // A checagem vem ANTES de qualquer escrita, e não depois: recusar depois do
+  // UPDATE seria recusar tarde demais.
+  // ──────────────────────────────────────────────────────────────────────
+  if (parsed.data.userId === profile.id) {
+    return {
+      ok: false,
+      error:
+        'Você não pode desativar o próprio acesso. Peça a outro administrador.',
+    }
+  }
+
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('profiles')
+    .update({ is_active: parsed.data.ativo })
+    .eq('id', parsed.data.userId)
+
+  if (error) {
+    return { ok: false, error: ERRO_GENERICO }
+  }
+
+  revalidatePath('/usuarios')
+  return {
+    ok: true,
+    mensagem: parsed.data.ativo
+      ? 'Acesso reativado.'
+      : 'Acesso desativado. A sessão cai no próximo request.',
   }
 }

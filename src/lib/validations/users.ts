@@ -29,3 +29,14 @@ export type CriarUsuarioInput = z.infer<typeof criarUsuarioSchema>
 export const regenerarSenhaSchema = z.object({
   userId: z.string().uuid('Usuário inválido'),
 })
+
+/**
+ * Liga/desliga acesso. `ativo` é o **estado alvo**, não um pedido de inversão —
+ * ver o comentário de `definirAcesso`. Vem do FormData como string, e só
+ * `'true'` e `'false'` são aceitos: um `z.coerce.boolean()` aqui trataria
+ * qualquer string não vazia como `true`, inclusive `'false'`.
+ */
+export const definirAcessoSchema = z.object({
+  userId: z.string().uuid('Usuário inválido'),
+  ativo: z.enum(['true', 'false']).transform((v) => v === 'true'),
+})

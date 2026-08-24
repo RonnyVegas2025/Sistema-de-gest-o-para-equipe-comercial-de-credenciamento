@@ -3,16 +3,27 @@ import { FunctionsHttpError, FunctionsFetchError } from '@supabase/supabase-js'
 
 const invoke = vi.fn()
 const requireProfile = vi.fn()
+const update = vi.fn()
+const eq = vi.fn()
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 vi.mock('@/lib/supabase/server', () => ({
-  createClient: () => ({ functions: { invoke } }),
+  createClient: () => ({
+    functions: { invoke },
+    from: () => ({
+      update: (patch: unknown) => {
+        update(patch)
+        return { eq: (col: string, val: string) => eq(col, val) }
+      },
+    }),
+  }),
 }))
 vi.mock('@/lib/auth/session', () => ({
   requireProfile: () => requireProfile(),
 }))
 
-const { criarUsuario, regenerarSenha } = await import('./actions')
+const { criarUsuario, regenerarSenha, definirAcesso } =
+  await import('./actions')
 
 /**
  * Sentinela: qualquer aparição desta string fora do caminho de sucesso é
@@ -21,8 +32,19 @@ const { criarUsuario, regenerarSenha } = await import('./actions')
  */
 const SENHA = 'S3nh4-T3mp0r4r14-#SENTINELA#'
 
-const ADMIN = { id: 'a1', role: 'administrador', is_active: true }
-const CONSULTOR = { id: 'c1', role: 'comercial', is_active: true }
+// UUIDs de verdade: o schema valida o formato antes da checagem de identidade,
+// então um id inventado reprovaria pelo motivo errado e o teste passaria sem
+// exercitar a recusa de auto-desativação.
+const ADMIN = {
+  id: '11111111-1111-4111-8111-111111111111',
+  role: 'administrador',
+  is_active: true,
+}
+const CONSULTOR = {
+  id: '99999999-9999-4999-8999-999999999999',
+  role: 'comercial',
+  is_active: true,
+}
 
 function form(campos: Record<string, string>): FormData {
   const fd = new FormData()
@@ -43,6 +65,9 @@ function respostaHttp(status: number, corpo: unknown): FunctionsHttpError {
 beforeEach(() => {
   invoke.mockReset()
   requireProfile.mockReset()
+  update.mockReset()
+  eq.mockReset()
+  eq.mockResolvedValue({ error: null })
   requireProfile.mockResolvedValue(ADMIN)
 })
 
@@ -277,5 +302,109 @@ describe('regenerarSenha', () => {
     )
 
     expect(JSON.stringify(state)).not.toContain(SENHA)
+  })
+})
+
+/**
+ * Etapa 1b. A asserção que sustenta o desenho está na primeira suíte: a recusa
+ * de auto-desativação vive na Server Action, não na ausência do botão. Quem
+ * chama a action direto não vê botão nenhum.
+ */
+describe('definirAcesso — o administrador não desativa a si mesmo', () => {
+  const OUTRO = '22222222-2222-4222-8222-222222222222'
+
+  it('recusa o próprio id — e NÃO emite o UPDATE', async () => {
+    const state = await definirAcesso(
+      {},
+      form({ userId: ADMIN.id, ativo: 'false' }),
+    )
+
+    expect(state).toMatchObject({ ok: false })
+    expect('error' in state && state.error).toContain('próprio acesso')
+    // O ponto: a recusa acontece ANTES da escrita, não depois dela.
+    expect(update).not.toHaveBeenCalled()
+    expect(eq).not.toHaveBeenCalled()
+  })
+
+  it('recusa o próprio id mesmo quando o alvo é reativar', async () => {
+    const state = await definirAcesso(
+      {},
+      form({ userId: ADMIN.id, ativo: 'true' }),
+    )
+
+    expect(state).toMatchObject({ ok: false })
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it('desativa outro usuário normalmente', async () => {
+    const state = await definirAcesso(
+      {},
+      form({ userId: OUTRO, ativo: 'false' }),
+    )
+
+    expect(update).toHaveBeenCalledWith({ is_active: false })
+    expect(eq).toHaveBeenCalledWith('id', OUTRO)
+    expect(state).toMatchObject({ ok: true })
+  })
+})
+
+describe('definirAcesso — estado alvo, não alternância', () => {
+  const OUTRO = '22222222-2222-4222-8222-222222222222'
+
+  it("'false' vira false, e não 'string não vazia é true'", async () => {
+    await definirAcesso({}, form({ userId: OUTRO, ativo: 'false' }))
+    expect(update).toHaveBeenCalledWith({ is_active: false })
+  })
+
+  it("'true' vira true", async () => {
+    await definirAcesso({}, form({ userId: OUTRO, ativo: 'true' }))
+    expect(update).toHaveBeenCalledWith({ is_active: true })
+  })
+
+  it('recusa qualquer outro valor em vez de adivinhar', async () => {
+    const state = await definirAcesso({}, form({ userId: OUTRO, ativo: 'sim' }))
+
+    expect(state).toMatchObject({ ok: false })
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it('reaplicar o mesmo alvo é idempotente, não inverte', async () => {
+    await definirAcesso({}, form({ userId: OUTRO, ativo: 'false' }))
+    await definirAcesso({}, form({ userId: OUTRO, ativo: 'false' }))
+
+    expect(update).toHaveBeenNthCalledWith(1, { is_active: false })
+    expect(update).toHaveBeenNthCalledWith(2, { is_active: false })
+  })
+})
+
+describe('definirAcesso — papel e entrada', () => {
+  it('um consultor não chega a escrever', async () => {
+    requireProfile.mockResolvedValue(CONSULTOR)
+
+    const state = await definirAcesso(
+      {},
+      form({ userId: '22222222-2222-4222-8222-222222222222', ativo: 'false' }),
+    )
+
+    expect(state).toMatchObject({ ok: false })
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it('id que não é uuid não chega a escrever', async () => {
+    const state = await definirAcesso({}, form({ userId: 'x', ativo: 'false' }))
+
+    expect(state).toMatchObject({ ok: false })
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it('erro do banco não vira sucesso', async () => {
+    eq.mockResolvedValue({ error: { message: 'boom' } })
+
+    const state = await definirAcesso(
+      {},
+      form({ userId: '22222222-2222-4222-8222-222222222222', ativo: 'false' }),
+    )
+
+    expect(state).toMatchObject({ ok: false })
   })
 })
