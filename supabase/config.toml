@@ -49,6 +49,9 @@ enabled = false
 [auth]
 enabled = true
 site_url = "env(NEXT_PUBLIC_SITE_URL)"
+# Só o stack LOCAL lê esta lista. O projeto hospedado tem a sua própria, no
+# painel (Authentication > URL Configuration) — mantida em sincronia à mão, com
+# a URL de produção e o curinga de preview. Ver README, seção "Deploy".
 additional_redirect_urls = [
   "http://localhost:3000",
   "http://localhost:3000/auth/callback",

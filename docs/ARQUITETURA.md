@@ -182,16 +182,39 @@ são próprias, deduplicando por `source_ref` e nunca por nome.
 é criada sem a sua policy com recorte **na mesma migration**, e o script de
 verificação daquela migration confere isso. Ver a emenda a D-018.
 
-## 10. A confirmar após configuração do ambiente
-
-Não fabricado. O que ainda não foi observado:
+## 10. Ambiente de execução
 
 | Item | Estado |
 | --- | --- |
-| Região e runtime da Vercel | **projeto não criado.** Previsto `gru1`, para casar com `sa-east-1` |
-| URL de produção | não existe |
-| Escopos Production / Preview / Development | não configurados |
-| IDs de ambiente da Vercel | não existem |
+| URL de produção | `https://sistema-de-gest-o-para-equipe-comer.vercel.app` |
+| Framework preset | Next.js, root `./`, build padrão |
+| Node | 22.x |
+| Região das funções | `gru1` (São Paulo), casando com o `sa-east-1` do Supabase |
+| Escopos de variáveis | Production, Preview e Development configurados |
+| Supabase Auth | Site URL e Redirect URLs apontando para a URL acima |
+
+Toda rota do CRM é `ƒ (Dynamic)` — o middleware valida a sessão a cada request,
+o que significa uma ida ao Supabase por request. Daí a região das funções
+acompanhar a do banco, e não ser detalhe de preferência.
+
+### `NEXT_PUBLIC_SITE_URL` e o escopo Preview
+
+A variável tem **um único consumidor**: o `redirectTo` do e-mail de recuperação
+de senha, em `src/lib/auth/actions.ts`. O `/auth/callback` usa o `origin` do
+próprio request, não a variável — o retorno depois da troca se autocorrige em
+qualquer ambiente.
+
+A URL de preview muda a cada deploy, então nenhum valor fixo está correto lá.
+Preview recebe a URL de produção, e a consequência está registrada em vez de
+descoberta depois: **pedir recuperação de senha a partir de um preview manda o
+e-mail apontando para produção.** Recuperar senha a partir de preview não é caso
+de uso; se um dia for, a correção é derivar o origin do header e deixar de ter
+configuração para errar.
+
+### Ainda em aberto
+
+| Item | Estado |
+| --- | --- |
 | Fornecedor de consulta de CNPJ | A-001, Sprint 2 |
 | Projeto Supabase de teste para RLS | será criado separado, descartável |
 
@@ -201,10 +224,13 @@ Distinto de §10: aqui o código existe, mas nunca rodou contra o Supabase.
 
 | Item | Coberto por |
 | --- | --- |
-| Login, troca de senha, bloqueio de desativado | nada — nunca executado |
-| Edge Function `admin-create-user`, criação de usuário | implantada e recusando anônimo (`401 no_session`); o caminho completo exige sessão de administrador |
+| Edge Function `admin-create-user`, criação de usuário | implantada e recusando anônimo (`401 no_session`); o caminho completo **não tem chamador** — não existe `/usuarios` nem Server Action que a invoque. A tela é da Sprint 2 |
 | Persistência da importação | cliente dublado |
-| `e2e/auth.spec.ts` | nada — nunca executado |
+| `e2e/auth.spec.ts` | nada — nunca executado, e nenhum workflow o roda |
+
+**Login, troca obrigatória de senha e bloqueio de usuário desativado saíram
+desta lista.** Foram verificados contra a aplicação no ar em 24/08/2026 —
+detalhe em `docs/sprints/SPRINT-1-REVISAO.md` §7.1.
 
 **O gate de cinco usuários saiu desta lista.** Rodou contra o banco real em
 24/08/2026, oito casos, todos OK — inclusive o de vínculo duplo, que devolveu as
@@ -220,7 +246,9 @@ As onze migrations, essas sim, foram aplicadas e verificadas contra o banco real
 1. [x] implantar a Edge Function admin-create-user
 2. [x] criar os cinco usuários e seus vínculos
 3. [x] rodar o gate — supabase/checks/GATE_painel.sql
-4. [ ] criar o projeto na Vercel e preencher esta seção §10
-5. [ ] validar login, troca obrigatória de senha e bloqueio de desativado
-6. [ ] rodar e2e/auth.spec.ts contra a aplicação no ar
+4. [x] criar o projeto na Vercel e preencher a §10
+5. [x] validar login, troca obrigatória de senha e bloqueio de desativado
+6. [ ] rodar e2e/auth.spec.ts contra a aplicação no ar — exige workflow próprio
+       e um E2E_EMAIL que já tenha trocado a senha
+7. [ ] Sprint 2: tela de usuários, o chamador que falta para a Edge Function
 ```

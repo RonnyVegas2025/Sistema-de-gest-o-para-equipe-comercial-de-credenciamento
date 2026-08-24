@@ -6,9 +6,11 @@ Entregue ao término da **etapa 9**, conforme `SPRINT-1.md`.
 > 11 foram executadas depois: `docs/ARQUITETURA.md` descreve o que ficou
 > implementado, e a validação em navegador está registrada abaixo, na seção 7.
 >
-> **Gate executado contra o banco real em 24/08/2026 — oito casos, todos OK.**
-> Saiu da seção 6 e está na seção 5.1. O que resta na seção 6 depende todo da
-> aplicação no ar, que é o passo seguinte ao merge.
+> **Gate executado contra o banco real em 24/08/2026 — oito casos, todos OK**
+> (seção 5.1). **Aplicação no ar na Vercel no mesmo dia**, com login, troca
+> obrigatória de senha e bloqueio de usuário desativado verificados contra ela
+> (seção 7.1). A seção 6 encolheu para dois itens, nenhum deles dependente de
+> infraestrutura.
 
 Branch: `sprint-1/fundacao`. A contagem de commits muda a cada correção, então
 não é fixada aqui — use `git rev-list --count origin/main..HEAD`.
@@ -271,19 +273,33 @@ sessão de administrador. Isso depende da aplicação no ar e segue na seção 6
 
 | Item | Estado | Depende de |
 | --- | --- | --- |
-| Login real | nunca rodou | aplicação no ar |
-| Troca obrigatória de senha ponta a ponta | nunca rodou | aplicação no ar |
-| Bloqueio de usuário desativado em sessão | nunca rodou | aplicação no ar |
-| Edge Function `admin-create-user` — criação de usuário | implantada e recusando anônimo; o caminho completo nunca rodou | sessão de administrador, ou seja, aplicação no ar |
-| `e2e/auth.spec.ts` | adaptado, nunca executado | app rodando contra Supabase |
+| Edge Function `admin-create-user` — criação de usuário | implantada e recusando anônimo; o caminho completo nunca rodou | **não existe chamador** — a tela é da Sprint 2 |
+| `e2e/auth.spec.ts` | adaptado, nunca executado | workflow próprio — ver abaixo |
 | Persistência da importação | coberta só com dublê | PostgREST real |
 | Carga da estrutura comercial | não aconteceu | exportação do Painel |
 | Cenários de §6.1 com recorte | não verificáveis | Sprint 2 |
-| Deploy na Vercel | não feito | decisão de adiar |
 
-O gate de cinco usuários **saiu desta seção** — rodou contra o banco real e está
-na seção 5.1. O que resta aqui depende todo da mesma coisa: a aplicação no ar.
-É o próximo passo, depois do merge.
+**Saíram desta seção:** o gate de cinco usuários (seção 5.1), o deploy na Vercel,
+e login, troca obrigatória de senha e bloqueio de usuário desativado (seção 7.1).
+
+Os dois que restam não dependem mais de infraestrutura:
+
+- **Criação de usuário pela Edge Function não tem chamador.** As rotas que
+  existem são `/`, `/login`, `/esqueci-senha`, `/nova-senha`, `/trocar-senha`,
+  `/inicio` e `/dev/componentes`. Não há `/usuarios`, e nenhum arquivo em `src/`
+  invoca a função. A Sprint 1 entrega a função e a barreira; a **tela** é da
+  Sprint 2 — a mesma separação da etapa 7, que entregou o mecanismo de
+  importação e não os dados.
+
+  Dá para exercitar o caminho completo sem tela, com um token de administrador
+  obtido pelo endpoint de senha do Auth e um POST direto à função. Fica
+  registrado como possível, não como feito.
+- **`e2e/auth.spec.ts` precisa de um workflow próprio.** `npm run test:e2e` é
+  comando local, e a operação do projeto é por painel e GitHub web (D-031):
+  nenhum workflow roda esse spec hoje. E `E2E_EMAIL` tem de apontar para um
+  usuário que **já trocou a senha** — com qualquer um dos cinco recém-criados o
+  spec falha, porque espera chegar em `/inicio` e o middleware desvia para
+  `/trocar-senha`. Não é defeito do spec nem do middleware.
 
 ---
 
@@ -320,6 +336,37 @@ institucional vira faixa curta no topo no tablet, com a fita de 3 px preservada.
 
 **Não validado:** os cinco estados (`loading`, `empty`, `error`, `forbidden`,
 `success`) exigem dados e sessão; nenhuma tela com dados existe ainda.
+
+---
+
+## 7.1 Autenticação — **contra a aplicação no ar**
+
+**Verificado em 24/08/2026**, na produção da Vercel:
+
+```
+https://sistema-de-gest-o-para-equipe-comer.vercel.app
+```
+
+Ambiente: Next.js na Vercel, funções em `gru1`, Supabase em `sa-east-1`,
+`NEXT_PUBLIC_SITE_URL` corrigida em Production e Preview, Supabase Auth com
+Site URL e Redirect URLs apontando para a URL acima.
+
+| Cenário | Resultado |
+| --- | --- |
+| login com `consultor@` | desviado para `/trocar-senha` ✅ |
+| tentativa de escapar por URL direta | recusada ✅ |
+| troca de senha | `must_change_password` vira `false`, chega em `/inicio` ✅ |
+| `is_active = false` com sessão viva | expulso no reload seguinte ✅ |
+| shell, sidebar, topbar, papel na tela | corretos ✅ |
+
+**As duas camadas da troca obrigatória funcionaram como desenhadas.** O desvio
+não vem de um lugar só: `middleware.ts` decide a cada request e `session.ts`
+decide de novo dentro da página. Escapar por URL direta exigiria vencer as duas.
+
+**O bloqueio de desativado só age no request seguinte**, e isso não é falha — é
+o desenho. O access token do Supabase é um JWT stateless, não revogável por id
+de forma confiável no GoTrue; quem revalida é o middleware, a cada request. A
+janela é o tempo até o próximo request, não a validade do token.
 
 ---
 
