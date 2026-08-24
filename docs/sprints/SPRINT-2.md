@@ -129,6 +129,13 @@ exige administrador e a Server Action revalida — mas quem não pode ser contor
 chamando a API direto é a própria Edge Function, que revalida sessão e papel por
 conta própria antes de tocar na service role.
 
+**Fora do escopo da etapa, para não virar esquecimento:** **inativar usuário**
+(`is_active = false`) **não entra aqui.** É `UPDATE` direto em `profiles`, mexe
+com trilha e com a matriz de D-022 — encerramento operacional × inativação por
+registro incorreto —, e não é o que destrava a Edge Function. Entra quando
+houver decisão registrada dizendo qual dos dois sentidos ela tem para um
+usuário. Hoje o caminho existente é o painel de Auth.
+
 *Aceite:*
 
 1. Um usuário real é criado pela tela e nasce com `must_change_password = true`.
@@ -136,7 +143,10 @@ conta própria antes de tocar na service role.
 3. Um `comercial` que abra `/usuarios` recebe o estado `forbidden`, não um erro.
 4. **Prova por mutação da camada 3b:** invocar a Edge Function com o token de um
    usuário não-administrador devolve `403 forbidden`. Se devolver `200`, a
-   barreira não existe — e o teste é o que revela isso.
+   barreira não existe — e o teste é o que revela isso. Roteiro de execução em
+   `docs/sprints/SPRINT-2-CAMADA-3B.md`, incluindo o **controle contra
+   vacuidade**: uma função quebrada que respondesse `403` a todo mundo passaria
+   sem a barreira existir.
 5. Os cinco estados (`loading`, `empty`, `error`, `forbidden`, `success`).
 6. Alvo de toque de 44 px em tela de toque, densidade compacta a partir de `lg:`
    (D-027).
@@ -150,9 +160,20 @@ sobre o runtime do Next**, e é em `.next/server` que um `serverEnv()`
 reintroduzido apareceria. Hoje os dois estão limpos, então a correção nasce
 verde — o que é justamente a hora de fazê-la.
 
-*Aceite:* o CI varre os dois diretórios; a etapa reprova se a string aparecer em
-qualquer um deles. Verificado quebrando de propósito: um arquivo temporário com
-a string em `.next/server` faz o passo falhar.
+**A checagem procura o NOME da variável, não o prefixo da chave.** Um grep por
+`sb_secret_` daria falso positivo: o próprio `@supabase/supabase-js` carrega
+`e.startsWith("sb_secret_")` numa função de detecção de formato de chave, e ela
+aparece em `.next/server/chunks/*` de qualquer build. Confirmado neste
+repositório. Alargar o padrão tornaria a etapa vermelha permanentemente — e o
+caminho conhecido dali em diante é alguém desligar a checagem.
+
+Também nesta etapa: corrigir a linha do `README.md` que diz que
+`SUPABASE_DB_PASSWORD` é "exigida por `db:push`". `db:push` foi removido em
+D-031.
+
+*Aceite:* o CI varre os dois diretórios; a etapa reprova se `SUPABASE_SERVICE_ROLE_KEY`
+aparecer em qualquer um deles. Verificado quebrando de propósito: um arquivo
+temporário com a string em `.next/server` faz o passo falhar.
 
 ---
 
