@@ -274,7 +274,7 @@ sessão de administrador. Isso depende da aplicação no ar e segue na seção 6
 | Item | Estado | Depende de |
 | --- | --- | --- |
 | Edge Function `admin-create-user` — criação de usuário | implantada e recusando anônimo; o caminho completo nunca rodou | **não existe chamador** — a tela é da Sprint 2 |
-| `e2e/auth.spec.ts` | adaptado, nunca executado | workflow próprio — ver abaixo |
+| `e2e/auth.spec.ts` | adaptado, nunca executado | **escolha declarada** — adiado na aprovação do plano da Sprint 2, ver abaixo |
 | Persistência da importação | coberta só com dublê | PostgREST real |
 | Carga da estrutura comercial | não aconteceu | exportação do Painel |
 | Cenários de §6.1 com recorte | não verificáveis | Sprint 2 |
@@ -294,12 +294,18 @@ Os dois que restam não dependem mais de infraestrutura:
   Dá para exercitar o caminho completo sem tela, com um token de administrador
   obtido pelo endpoint de senha do Auth e um POST direto à função. Fica
   registrado como possível, não como feito.
-- **`e2e/auth.spec.ts` precisa de um workflow próprio.** `npm run test:e2e` é
-  comando local, e a operação do projeto é por painel e GitHub web (D-031):
-  nenhum workflow roda esse spec hoje. E `E2E_EMAIL` tem de apontar para um
-  usuário que **já trocou a senha** — com qualquer um dos cinco recém-criados o
-  spec falha, porque espera chegar em `/inicio` e o middleware desvia para
-  `/trocar-senha`. Não é defeito do spec nem do middleware.
+- **`e2e/auth.spec.ts` está adiado por decisão, não por esquecimento.** Na
+  aprovação do plano da Sprint 2 ficou decidido que o workflow não entra naquela
+  sprint. Fica registrado aqui para que a distinção sobreviva à memória de quem
+  decidiu.
+
+  Duas coisas precisam existir quando ele entrar. **Um workflow próprio:**
+  `npm run test:e2e` é comando local, e a operação do projeto é por painel e
+  GitHub web (D-031) — nenhum workflow roda esse spec hoje. E **um `E2E_EMAIL`
+  que já tenha trocado a senha:** com qualquer um dos cinco usuários
+  recém-criados o spec falha, porque espera chegar em `/inicio` e o middleware
+  desvia para `/trocar-senha`. Não é defeito do spec nem do middleware — é a
+  troca obrigatória funcionando. O `consultor@` serve, porque já trocou.
 
 ---
 
