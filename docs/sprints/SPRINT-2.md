@@ -92,7 +92,7 @@ nunca é editada; correção é migration nova.
 1b Desativar e reativar acesso           sem migration
 1c Diagnóstico de recusa na função       sem migration · programada
 1d Bug de regeneração                    encerrado · não reproduzível
-2  Correção do CI                        sem migration
+2  Correção do CI                        sem migration · concluída
 3  0012  companies                       leitura ampla, exceção documentada
 4  Contrato CnpjProvider                 sem migration
 5  0013  relacionamento + enums          primeiro enforcement real do recorte
@@ -300,9 +300,28 @@ Também nesta etapa: corrigir a linha do `README.md` que diz que
 `SUPABASE_DB_PASSWORD` é "exigida por `db:push`". `db:push` foi removido em
 D-031.
 
-*Aceite:* o CI varre os dois diretórios; a etapa reprova se `SUPABASE_SERVICE_ROLE_KEY`
-aparecer em qualquer um deles. Verificado quebrando de propósito: um arquivo
-temporário com a string em `.next/server` faz o passo falhar.
+**Um detalhe de shell que já mordeu antes.** A checagem usa `grep -q`, não um
+pipeline: o status de saída de `grep ... | head` é o do **último** comando, que
+devolve 0 mesmo sem casar nada — uma checagem escrita assim passa sempre. O
+`ci.yml` nunca teve esse defeito, mas uma conferência ad-hoc minha teve, durante
+a Sprint 1, e chegou a reportar um falso alarme.
+
+*Aceite — cumprido:*
+
+| Estado | Resultado |
+| --- | --- |
+| build limpo | passa |
+| string plantada em `.next/server` | **reprova** |
+| a mesma string, na checagem ANTIGA | **passava** — era o furo |
+| string plantada em `.next/static` | **reprova** |
+| removidas | passa |
+
+A linha 2b é a que dá sentido à etapa: o caso que D-030 existe para impedir
+atravessava a checagem anterior sem ruído.
+
+Também nesta etapa: a linha do `README.md` e o comentário do `.env.example` que
+diziam que `SUPABASE_DB_PASSWORD` é "exigida por `db push`". `db push` não é
+usado neste projeto (D-031).
 
 ---
 
