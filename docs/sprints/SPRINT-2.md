@@ -132,7 +132,12 @@ conta própria antes de tocar na service role.
 **Desativar usuário não entrou nesta etapa.** Faltava a semântica: qual dos dois
 sentidos de D-022 a ação tem para um usuário. Ficou decidido depois, em **D-036**
 — `is_active = false` é **encerramento operacional**, não erro cadastral —, e a
-ação passa a ter lugar definido. A proposta de onde ela entra está na etapa 1b.
+ação passa a ter lugar definido.
+
+**Onde ela entra ainda não está autorizado.** A proposta é uma etapa curta logo
+após a validação da camada 3b, aproveitando a tela que já existe; enquanto não
+houver aprovação, este plano segue com nove etapas e desativar usuário continua
+sendo operação de painel.
 
 *Aceite:*
 
