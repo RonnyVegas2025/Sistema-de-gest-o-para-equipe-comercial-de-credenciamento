@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useFormState, useFormStatus } from 'react-dom'
 import { KeyRound, UserCheck, UserPlus, UserX } from 'lucide-react'
 import {
@@ -30,6 +30,7 @@ import {
   type UsuarioState,
 } from '@/lib/users/actions'
 import type { UsuarioLinha } from '@/lib/users/queries'
+import { useFeedbackDescartavel } from '@/hooks/use-feedback-descartavel'
 import { NovaSenhaDialog } from './nova-senha-dialog'
 
 const estadoInicial: UsuarioState = {}
@@ -76,13 +77,44 @@ export function UsuariosClient({
 }) {
   const [formAberto, setFormAberto] = useState(false)
   const [alvo, setAlvo] = useState<UsuarioLinha | null>(null)
-  const [criarState, criarAction] = useFormState(criarUsuario, estadoInicial)
-  const [senhaState, senhaAction] = useFormState(regenerarSenha, estadoInicial)
-  const [acessoState, acessoAction] = useFormState(
+  const [criarBruto, criarAction] = useFormState(criarUsuario, estadoInicial)
+  const [senhaBruto, senhaAction] = useFormState(regenerarSenha, estadoInicial)
+  const [acessoBruto, acessoAction] = useFormState(
     definirAcesso,
     estadoInicialAcesso,
   )
   const acessoForm = useRef<HTMLFormElement>(null)
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Os TRÊS estados são descartáveis, não só o da senha.
+  //
+  // `useFormState` guarda o último retorno e não oferece reset: uma mensagem
+  // de erro fica na tela até uma nova submissão daquela mesma action. Quem vê
+  // a tela associa a mensagem à última coisa que fez — e pode não ter relação.
+  // Isso já custou uma rodada de investigação num bug desta tela.
+  //
+  // A regra é uma só: feedback pertence à interação que o produziu, e a
+  // interação seguinte o encerra.
+  // ────────────────────────────────────────────────────────────────────────
+  const [criarState, descartarCriar] = useFeedbackDescartavel(
+    criarBruto,
+    estadoInicial,
+  )
+  const [senhaState, descartarSenha] = useFeedbackDescartavel(
+    senhaBruto,
+    estadoInicial,
+  )
+  const [acessoState, descartarAcesso] = useFeedbackDescartavel(
+    acessoBruto,
+    estadoInicialAcesso,
+  )
+
+  /** Toda abertura ou fechamento de diálogo encerra o feedback pendente. */
+  const limparFeedback = useCallback(() => {
+    descartarCriar()
+    descartarSenha()
+    descartarAcesso()
+  }, [descartarCriar, descartarSenha, descartarAcesso])
 
   // Qualquer um dos dois fluxos que devolva senha abre o mesmo diálogo.
   const sucesso =
@@ -92,14 +124,18 @@ export function UsuariosClient({
         ? senhaState
         : null
 
-  const [senhaFechada, setSenhaFechada] = useState<string | null>(null)
-  const mostrarSenha = sucesso && sucesso.password !== senhaFechada
+  // Sem `senhaFechada`: o diálogo some porque o feedback foi descartado ao
+  // fechar, não por um segundo controle paralelo ao estado.
+  const mostrarSenha = sucesso !== null
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-end">
         <Button
-          onClick={() => setFormAberto(true)}
+          onClick={() => {
+            limparFeedback()
+            setFormAberto(true)
+          }}
           icon={<UserPlus className="h-4 w-4" />}
         >
           Novo usuário
@@ -177,7 +213,10 @@ export function UsuariosClient({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setAlvo(usuario)}
+                        onClick={() => {
+                          limparFeedback()
+                          setAlvo(usuario)
+                        }}
                         icon={
                           usuario.is_active ? (
                             <UserX className="h-4 w-4" />
@@ -199,7 +238,10 @@ export function UsuariosClient({
 
       <Modal
         open={formAberto}
-        onClose={() => setFormAberto(false)}
+        onClose={() => {
+          limparFeedback()
+          setFormAberto(false)
+        }}
         title="Novo usuário"
       >
         <form action={criarAction} className="flex flex-col gap-4" noValidate>
@@ -242,7 +284,13 @@ export function UsuariosClient({
           ) : null}
 
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setFormAberto(false)}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                limparFeedback()
+                setFormAberto(false)
+              }}
+            >
               Cancelar
             </Button>
             <BotaoSubmit>Criar usuário</BotaoSubmit>
@@ -274,7 +322,10 @@ export function UsuariosClient({
         }
         confirmLabel={alvo?.is_active ? 'Desativar' : 'Reativar'}
         confirmVariant={alvo?.is_active ? 'destructive' : 'primary'}
-        onClose={() => setAlvo(null)}
+        onClose={() => {
+          limparFeedback()
+          setAlvo(null)
+        }}
         onConfirm={() => {
           acessoForm.current?.requestSubmit()
           setAlvo(null)
@@ -286,7 +337,7 @@ export function UsuariosClient({
           senha={sucesso.password}
           email={sucesso.email}
           onClose={() => {
-            setSenhaFechada(sucesso.password)
+            limparFeedback()
             setFormAberto(false)
           }}
         />
