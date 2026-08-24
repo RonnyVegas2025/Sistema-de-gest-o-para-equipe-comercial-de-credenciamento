@@ -90,6 +90,7 @@ nunca é editada; correção é migration nova.
 ```
 1  Tela de usuários                      sem migration
 1b Desativar e reativar acesso           sem migration
+1c Diagnóstico de recusa na função       sem migration · bloqueada
 2  Correção do CI                        sem migration
 3  0012  companies                       leitura ampla, exceção documentada
 4  Contrato CnpjProvider                 sem migration
@@ -204,6 +205,45 @@ Quando existir, entra como migration própria.
 4. Um `comercial` que chame a ação recebe recusa.
 5. Estado desatualizado não inverte valor errado: a ação recebe o alvo.
 6. Alvo de toque de 44 px; a confirmação não empilha modal sobre modal.
+
+---
+
+## 1c · Pendente — a Edge Function distinguir "não é admin" de "não consegui verificar"
+
+Achado ao investigar um bug relatado na etapa 1: regenerar senha recusando um
+administrador legítimo, com a mensagem de criação de usuários.
+
+A parte de mensagem já foi corrigida — cada ação nomeia a si mesma, e a recusa
+da aplicação usa texto diferente da recusa do serviço, para que a próxima
+reprodução diga sozinha qual camada disparou.
+
+**O que falta é na função**, e depende de repastá-la no painel, por isso está
+aqui e não junto da correção:
+
+```ts
+const { data: callerProfile } = await authClient
+  .from('profiles').select('role').eq('id', caller.id).single()
+if (!callerProfile || callerProfile.role !== 'administrador') {
+  return json(403, { error: 'forbidden' })
+}
+```
+
+**O erro do `.single()` é descartado.** Zero linhas, mais de uma, falha de rede —
+tudo vira `data: null`, e a função responde `403 forbidden`. Recusar por padrão
+está certo; **registrar como "você não é administrador" não está**. Uma falha de
+infraestrutura fica indistinguível de uma negação de permissão, e alguém depura
+permissão por horas enquanto o problema é conexão.
+
+*Proposta:* separar os dois. Papel lido e diferente de `administrador` continua
+`403 forbidden`; leitura que falhou vira `503 role_check_failed`, com o erro no
+log da função. A recusa continua sendo o padrão seguro — o que muda é ela parar
+de mentir sobre o motivo.
+
+*Aceite:* reproduzir os dois caminhos e ver códigos diferentes; o log da função
+registrando o erro real da leitura.
+
+**Bloqueada até o log da invocação que falhou ser lido** — sem ele não se sabe
+se este defeito é a causa do bug relatado ou um segundo defeito independente.
 
 ---
 
