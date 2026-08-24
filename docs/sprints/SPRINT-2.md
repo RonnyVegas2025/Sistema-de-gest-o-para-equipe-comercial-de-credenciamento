@@ -89,6 +89,7 @@ nunca é editada; correção é migration nova.
 
 ```
 1  Tela de usuários                      sem migration
+1b Desativar e reativar acesso           sem migration
 2  Correção do CI                        sem migration
 3  0012  companies                       leitura ampla, exceção documentada
 4  Contrato CnpjProvider                 sem migration
@@ -134,10 +135,7 @@ sentidos de D-022 a ação tem para um usuário. Ficou decidido depois, em **D-0
 — `is_active = false` é **encerramento operacional**, não erro cadastral —, e a
 ação passa a ter lugar definido.
 
-**Onde ela entra ainda não está autorizado.** A proposta é uma etapa curta logo
-após a validação da camada 3b, aproveitando a tela que já existe; enquanto não
-houver aprovação, este plano segue com nove etapas e desativar usuário continua
-sendo operação de painel.
+**Onde ela entra:** etapa 1b, logo abaixo.
 
 *Aceite:*
 
@@ -153,6 +151,59 @@ sendo operação de painel.
 5. Os cinco estados (`loading`, `empty`, `error`, `forbidden`, `success`).
 6. Alvo de toque de 44 px em tela de toque, densidade compacta a partir de `lg:`
    (D-027).
+
+---
+
+## 1b · Desativar e reativar acesso
+
+Aprovada depois da etapa 1, uma vez que **D-036** definiu a semântica que
+faltava: `is_active = false` é **encerramento operacional**, não erro cadastral.
+A pessoa saiu da empresa ou perdeu o acesso; o registro continua válido e o
+histórico continua contando.
+
+Aproveita a tela que já existe. Sem migration, sem Edge Function — não precisa
+de service role: é `UPDATE` em `profiles`, e a RLS já restringe a escrita.
+
+**Entrega**
+
+- ação na coluna de ações da `/usuarios`, ao lado de "Gerar nova senha";
+- `ConfirmDialog` nomeando a pessoa e dizendo que o acesso cai no próximo
+  request;
+- **reativar é o mesmo caminho, invertido.** Por D-036 é operação normal, não
+  rito de exceção — não exige motivo nem o procedimento de D-025, que existe
+  para reverter erro de cadastro.
+
+**A ação recebe o estado alvo, não um "alternar".** Um toggle decide a partir do
+que a tela acredita; com a lista desatualizada — outra aba, outro administrador —
+ele inverte o valor errado. Mandar `ativo: false` significa *deixe desativado*, e
+é idempotente.
+
+### O administrador não pode desativar a si mesmo
+
+É o modo mais rápido de perder o acesso administrativo do projeto: a recuperação
+seria pelo painel de Auth, à mão, e ninguém saberia por onde começar.
+
+**A recusa vive na Server Action, não na ausência do botão.** Botão escondido não
+é autorização — é a mesma lógica do saneamento de `x-user-profile` (D-019) e da
+camada 3b: quem chama direto não vê botão nenhum. A tela também esconde a ação
+na própria linha, mas isso é conveniência.
+
+**Motivo e autoria ficam de fora**, e não por esquecimento: exigiriam colunas
+novas em `profiles`, portanto migration, portanto uma decisão que não existe.
+Quando existir, entra como migration própria.
+
+*Aceite:*
+
+1. Desativar um usuário pela tela; a sessão viva dele cai no reload seguinte.
+   **Isso não é reverificação da Sprint 1** — lá se provou o middleware; aqui se
+   prova que a tela dispara o mesmo `UPDATE`.
+2. Reativar devolve o acesso, sem exigir motivo.
+3. **Teste explícito:** chamar a Server Action com o próprio `id` recebe recusa,
+   e o `UPDATE` **não** chega a ser emitido. Provado por mutação: removendo a
+   checagem, o teste reprova.
+4. Um `comercial` que chame a ação recebe recusa.
+5. Estado desatualizado não inverte valor errado: a ação recebe o alvo.
+6. Alvo de toque de 44 px; a confirmação não empilha modal sobre modal.
 
 ---
 

@@ -59,7 +59,7 @@ export default async function UsuariosPage() {
         title="Usuários"
         description="Criação de acesso e senha temporária. O primeiro acesso exige troca de senha."
       />
-      <UsuariosClient usuarios={usuarios} />
+      <UsuariosClient usuarios={usuarios} meuId={profile.id} />
     </div>
   )
 }

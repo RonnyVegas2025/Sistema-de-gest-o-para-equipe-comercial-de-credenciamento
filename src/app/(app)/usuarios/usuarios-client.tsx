@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useFormState, useFormStatus } from 'react-dom'
-import { KeyRound, UserPlus } from 'lucide-react'
+import { KeyRound, UserCheck, UserPlus, UserX } from 'lucide-react'
 import {
   Alert,
   Badge,
   Button,
+  ConfirmDialog,
   EmptyState,
   FieldError,
   FormField,
@@ -23,13 +24,16 @@ import {
 import { ALL_ROLES, ROLES } from '@/lib/permissions/roles'
 import {
   criarUsuario,
+  definirAcesso,
   regenerarSenha,
+  type AcessoState,
   type UsuarioState,
 } from '@/lib/users/actions'
 import type { UsuarioLinha } from '@/lib/users/queries'
 import { NovaSenhaDialog } from './nova-senha-dialog'
 
 const estadoInicial: UsuarioState = {}
+const estadoInicialAcesso: AcessoState = {}
 
 const OPCOES_PAPEL = ALL_ROLES.map((role) => ({
   value: role,
@@ -63,10 +67,22 @@ function erroDe(state: UsuarioState): string | undefined {
  * O gate de papel já aconteceu no Server Component; este componente não decide
  * permissão — a Server Action revalida, e a Edge Function decide de verdade.
  */
-export function UsuariosClient({ usuarios }: { usuarios: UsuarioLinha[] }) {
+export function UsuariosClient({
+  usuarios,
+  meuId,
+}: {
+  usuarios: UsuarioLinha[]
+  meuId: string
+}) {
   const [formAberto, setFormAberto] = useState(false)
+  const [alvo, setAlvo] = useState<UsuarioLinha | null>(null)
   const [criarState, criarAction] = useFormState(criarUsuario, estadoInicial)
   const [senhaState, senhaAction] = useFormState(regenerarSenha, estadoInicial)
+  const [acessoState, acessoAction] = useFormState(
+    definirAcesso,
+    estadoInicialAcesso,
+  )
+  const acessoForm = useRef<HTMLFormElement>(null)
 
   // Qualquer um dos dois fluxos que devolva senha abre o mesmo diálogo.
   const sucesso =
@@ -92,6 +108,13 @@ export function UsuariosClient({ usuarios }: { usuarios: UsuarioLinha[] }) {
 
       {erroDe(senhaState) ? (
         <Alert variant="danger">{erroDe(senhaState)}</Alert>
+      ) : null}
+
+      {'ok' in acessoState && acessoState.ok === false ? (
+        <Alert variant="danger">{acessoState.error}</Alert>
+      ) : null}
+      {'ok' in acessoState && acessoState.ok === true ? (
+        <Alert variant="success">{acessoState.mensagem}</Alert>
       ) : null}
 
       {usuarios.length === 0 ? (
@@ -129,18 +152,44 @@ export function UsuariosClient({ usuarios }: { usuarios: UsuarioLinha[] }) {
                   </div>
                 </TD>
                 <TD>
-                  <form action={senhaAction} className="flex justify-end">
-                    <input type="hidden" name="userId" value={usuario.id} />
-                    <input type="hidden" name="email" value={usuario.email} />
-                    <Button
-                      type="submit"
-                      variant="ghost"
-                      size="sm"
-                      icon={<KeyRound className="h-4 w-4" />}
-                    >
-                      Gerar nova senha
-                    </Button>
-                  </form>
+                  <div className="flex flex-wrap justify-end gap-1">
+                    <form action={senhaAction}>
+                      <input type="hidden" name="userId" value={usuario.id} />
+                      <input type="hidden" name="email" value={usuario.email} />
+                      <Button
+                        type="submit"
+                        variant="ghost"
+                        size="sm"
+                        icon={<KeyRound className="h-4 w-4" />}
+                      >
+                        Gerar nova senha
+                      </Button>
+                    </form>
+
+                    {/*
+                      A própria linha não oferece a ação: desativar o próprio
+                      acesso é o caminho mais rápido para o projeto ficar sem
+                      administrador. Esconder aqui é conveniência — a recusa
+                      que vale está na Server Action, porque quem chama direto
+                      não vê botão nenhum.
+                    */}
+                    {usuario.id === meuId ? null : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAlvo(usuario)}
+                        icon={
+                          usuario.is_active ? (
+                            <UserX className="h-4 w-4" />
+                          ) : (
+                            <UserCheck className="h-4 w-4" />
+                          )
+                        }
+                      >
+                        {usuario.is_active ? 'Desativar' : 'Reativar'}
+                      </Button>
+                    )}
+                  </div>
                 </TD>
               </TR>
             ))}
@@ -200,6 +249,37 @@ export function UsuariosClient({ usuarios }: { usuarios: UsuarioLinha[] }) {
           </div>
         </form>
       </Modal>
+
+      {/*
+        Um único form fora da tabela, submetido pelo diálogo. O alvo vai em
+        campo escondido e `ativo` carrega o ESTADO ALVO, não um pedido de
+        inversão — ver `definirAcesso`.
+      */}
+      <form action={acessoAction} ref={acessoForm} className="hidden">
+        <input type="hidden" name="userId" value={alvo?.id ?? ''} />
+        <input
+          type="hidden"
+          name="ativo"
+          value={alvo?.is_active ? 'false' : 'true'}
+        />
+      </form>
+
+      <ConfirmDialog
+        open={alvo !== null}
+        title={alvo?.is_active ? 'Desativar acesso' : 'Reativar acesso'}
+        description={
+          alvo?.is_active
+            ? `${alvo.full_name} perde o acesso no próximo carregamento de página. O cadastro continua válido e o histórico continua contando.`
+            : `${alvo?.full_name} volta a acessar a plataforma.`
+        }
+        confirmLabel={alvo?.is_active ? 'Desativar' : 'Reativar'}
+        confirmVariant={alvo?.is_active ? 'destructive' : 'primary'}
+        onClose={() => setAlvo(null)}
+        onConfirm={() => {
+          acessoForm.current?.requestSubmit()
+          setAlvo(null)
+        }}
+      />
 
       {mostrarSenha && sucesso ? (
         <NovaSenhaDialog
