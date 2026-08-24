@@ -129,12 +129,10 @@ exige administrador e a Server Action revalida — mas quem não pode ser contor
 chamando a API direto é a própria Edge Function, que revalida sessão e papel por
 conta própria antes de tocar na service role.
 
-**Fora do escopo da etapa, para não virar esquecimento:** **inativar usuário**
-(`is_active = false`) **não entra aqui.** É `UPDATE` direto em `profiles`, mexe
-com trilha e com a matriz de D-022 — encerramento operacional × inativação por
-registro incorreto —, e não é o que destrava a Edge Function. Entra quando
-houver decisão registrada dizendo qual dos dois sentidos ela tem para um
-usuário. Hoje o caminho existente é o painel de Auth.
+**Desativar usuário não entrou nesta etapa.** Faltava a semântica: qual dos dois
+sentidos de D-022 a ação tem para um usuário. Ficou decidido depois, em **D-036**
+— `is_active = false` é **encerramento operacional**, não erro cadastral —, e a
+ação passa a ter lugar definido. A proposta de onde ela entra está na etapa 1b.
 
 *Aceite:*
 
@@ -160,12 +158,12 @@ sobre o runtime do Next**, e é em `.next/server` que um `serverEnv()`
 reintroduzido apareceria. Hoje os dois estão limpos, então a correção nasce
 verde — o que é justamente a hora de fazê-la.
 
-**A checagem procura o NOME da variável, não o prefixo da chave.** Um grep por
-`sb_secret_` daria falso positivo: o próprio `@supabase/supabase-js` carrega
-`e.startsWith("sb_secret_")` numa função de detecção de formato de chave, e ela
-aparece em `.next/server/chunks/*` de qualquer build. Confirmado neste
-repositório. Alargar o padrão tornaria a etapa vermelha permanentemente — e o
-caminho conhecido dali em diante é alguém desligar a checagem.
+**A checagem procura o NOME da variável, não o prefixo da chave** (D-035). Um
+grep por `sb_secret_` daria falso positivo: o próprio `@supabase/supabase-js`
+carrega `e.startsWith("sb_secret_")` numa função de detecção de formato de
+chave, e ela aparece em `.next/server/chunks/*` de qualquer build. Confirmado
+neste repositório. Alargar o padrão tornaria a etapa vermelha permanentemente —
+e o caminho conhecido dali em diante é alguém desligar a checagem.
 
 Também nesta etapa: corrigir a linha do `README.md` que diz que
 `SUPABASE_DB_PASSWORD` é "exigida por `db:push`". `db:push` foi removido em
