@@ -89,6 +89,24 @@ Se a bateria não passar, **não se avança para `companies`**. Detalhamento em
 Migrations `0012`–`0014`. *(Renumeradas: a Sprint 1 consumiu `0010` e `0011` com
 as correções da parada obrigatória de revisão — ver `MODELO_DADOS.md` §8.)*
 
+Plano executável com critério de aceite por etapa: `docs/sprints/SPRINT-2.md`.
+
+### Escopo acrescentado na aprovação do plano — tela de usuários
+
+**A tela de usuários entra como etapa 1, antes de qualquer migration.** Não
+estava prevista em sprint nenhuma; é escopo novo, registrado aqui para não ficar
+só no plano da sprint.
+
+Ela é o **chamador que falta** para a Edge Function `admin-create-user`: a
+Sprint 1 entregou a função e a barreira, e a função ficou implantada sem ninguém
+que a invocasse. Não exige migration — roda sobre `profiles` (`0001`),
+`must_change_password` (`0002`) e a view `user_directory` (`0011`), construída
+exatamente para preencher `profile_id` em formulário de vínculo.
+
+O motivo decisivo é operacional: os cinco usuários do gate são de teste, e
+usuário real de piloto nasce por esta tela ou nasce à mão no painel de Auth — a
+segunda opção é onde se erra por distração.
+
 ### Regra de aceite inegociável — RLS com recorte na mesma migration
 
 **Nenhuma tabela `crm_*` é criada sem a sua policy com recorte na mesma
@@ -111,13 +129,21 @@ que faltou foi o momento em que a dívida se tornava visível. Esta regra é ess
 momento: a migration não passa na verificação sem o recorte.
 
 
-- `companies` com campos de consulta de CNPJ e coordenadas
+- **Tela de usuários** — o chamador da Edge Function (acima)
+- `companies` com campos de consulta de CNPJ e coordenadas — `0012`
 - Contrato `CnpjProvider` em `src/services/cnpj/`, com implementação manual como
   fallback (D-008) — fornecedor real fica para A-001
-- `crm_contacts` com recorte de escopo (D-009)
-- `crm_company_relationships` 1:1 (D-014), classificação prospect × base_vegas
+- `crm_company_relationships` 1:1 (D-014), classificação prospect × base_vegas —
+  `0013`
+- `crm_contacts` com recorte de escopo (D-009) — `0014`
 - Busca por CNPJ existente com o comportamento de D-016
 - Página do estabelecimento: cadastro, relacionamento, contatos
+
+**`crm_contacts` vem depois do relacionamento, invertendo a ordem proposta em
+`MODELO_DADOS.md` §8.** A policy de contatos é um `EXISTS` sobre
+`crm_company_relationships`; nascer com recorte na mesma migration exigiria uma
+tabela que só viria depois. A ordem era conveniência, a regra de aceite é
+garantia — quem cede é a ordem. Emenda registrada em §8.
 
 ---
 

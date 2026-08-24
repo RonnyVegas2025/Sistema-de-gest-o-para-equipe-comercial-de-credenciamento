@@ -249,6 +249,8 @@ cnpj_lookup_source      text                -- qual fornecedor respondeu
 latitude                numeric(10,7)
 longitude               numeric(10,7)
 
+inactivated_at, inactivated_by, inactivation_reason,
+reactivation_reason                 -- convenção de quatro colunas, ver 3.2
 auditoria
 ```
 
@@ -282,9 +284,20 @@ is_primary         boolean not null default false
 is_decision_maker  boolean not null default false
 notes              text
 status             entity_status not null default 'ativo'
-inactivated_at, inactivated_by, inactivation_reason   -- convenção
+inactivated_at, inactivated_by, inactivation_reason,
+reactivation_reason                                   -- convenção, ver abaixo
 auditoria
 ```
+
+**A convenção de inativação tem quatro colunas, não três** (D-033). As três
+primeiras respondem *por que este registro está inativo*; `reactivation_reason`
+responde *por que foi reativado*, em coluna própria. Reaproveitar uma coluna só
+para os dois sentidos é ambíguo por construção: lida seis meses depois, ela não
+diz qual dos dois eventos descreve.
+
+Isto vale para **toda entidade nova com `status`**, não só para esta. As quatro
+da Sprint 1 receberam `reactivation_reason` na migration `0010`; as da Sprint 2
+em diante nascem com ela.
 
 N contatos por estabelecimento. Só `name` é obrigatório. Dado pessoal de
 terceiro: acesso restrito por escopo, ver `RLS_PERMISSOES.md` §4.
@@ -767,6 +780,20 @@ Uma por vez, com confirmação antes da próxima (D-021).
 > da Sprint 2 em diante deslocou **duas posições**. A tabela abaixo é a
 > numeração válida; qualquer documento que ainda cite `0010 = companies` está
 > desatualizado.
+>
+> **Emenda — `crm_contacts` e o relacionamento trocaram de lugar.** A proposta
+> original era `0013 = crm_contacts`, `0014 = crm_company_relationships`. Não é
+> descuido de quem escreveu: a inversão foi decidida na aprovação do plano da
+> Sprint 2, e o motivo é a regra de aceite herdada de D-018 — nenhuma tabela
+> `crm_*` nasce sem a sua policy com recorte na mesma migration.
+>
+> A policy de `crm_contacts` (`RLS_PERMISSOES.md` §5.4) é um `EXISTS` sobre
+> `crm_company_relationships`. Na ordem original, nascer com recorte exigiria uma
+> tabela que só viria depois — as duas regras se contradizem, e a que cede é a
+> ordem. **A ordem era conveniência; a regra é garantia.**
+>
+> Não há dependência no sentido contrário: `crm_company_relationships` referencia
+> `companies` (`0012`), `sellers` (`0006`) e `teams` (`0003`), todas anteriores.
 
 | # | Assunto | Sprint |
 | --- | --- | --- |
@@ -782,8 +809,8 @@ Uma por vez, com confirmação antes da próxima (D-021).
 | 0010 | `reactivation_reason` nas quatro entidades (D-033) | 1 |
 | 0011 | View `user_directory` para vínculo de perfil (D-032) | 1 |
 | 0012 | `companies` + trilha cadastral | 2 |
-| 0013 | `crm_contacts` + trilha cadastral | 2 |
-| 0014 | `crm_relationship_type`, `crm_opportunity_origin`, `crm_company_relationships` | 2 |
+| 0013 | `crm_relationship_type`, `crm_opportunity_origin`, `crm_company_relationships` + trilha cadastral | 2 |
+| 0014 | `crm_contacts` + trilha cadastral — **depois** do relacionamento, ver emenda acima | 2 |
 | 0015 | `crm_portfolios`, `crm_portfolio_companies`, `crm_assignment_history` | 3 |
 | 0016 | `commercial_products`, `crm_loss_reasons` | 4 |
 | 0017 | `crm_opportunity_status`, `crm_opportunities` + índice único parcial + CHECK | 4 |
