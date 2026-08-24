@@ -41,15 +41,55 @@ export type UsuarioState =
   | { ok: false; error: string; campos?: Record<string, string> }
   | Record<string, never>
 
-/** Mensagens por código devolvido pela Edge Function. */
+/**
+ * As três operações da tela. Existem para que a mensagem de recusa **nomeie o
+ * que foi recusado** — a primeira versão tinha um texto só, escrito para
+ * criação, e regenerar senha dizia "somente administradores podem criar
+ * usuários". Mensagem que descreve outra ação manda o usuário investigar o
+ * lugar errado.
+ */
+type Operacao = 'criar' | 'regenerar' | 'acesso'
+
+const O_QUE: Record<Operacao, string> = {
+  criar: 'criar usuários',
+  regenerar: 'gerar nova senha',
+  acesso: 'alterar o acesso de usuários',
+}
+
+/**
+ * ────────────────────────────────────────────────────────────────────────────
+ * DUAS CAMADAS RECUSAM, E AS MENSAGENS TÊM DE SER DISTINGUÍVEIS.
+ *
+ * A guarda desta aplicação (`canWrite`) recusa antes de a requisição sair; a
+ * Edge Function recusa depois, e é ela a barreira que decide de verdade — quem
+ * chama a API direto não passa pela primeira.
+ *
+ * Enquanto as duas devolviam o MESMO texto, uma recusa observada na tela não
+ * dizia qual camada disparou, e o diagnóstico virava adivinhação: foi o papel
+ * lido aqui, ou a função recusando lá? As duas frases abaixo existem para que a
+ * próxima reprodução responda isso sozinha, sem log e sem instrumentação nova.
+ *
+ * Se alguém unificá-las de novo por parecerem redundantes, a capacidade de
+ * diagnóstico vai junto. O teste `as duas camadas nunca produzem o mesmo texto`
+ * é o que impede isso.
+ * ────────────────────────────────────────────────────────────────────────────
+ */
+function recusaDaAplicacao(op: Operacao): string {
+  return `Seu perfil não permite ${O_QUE[op]}. Recusado pela aplicação, antes de enviar.`
+}
+
+function recusaDaFuncao(op: Operacao): string {
+  return `Seu perfil não permite ${O_QUE[op]}. Recusado pelo serviço de usuários.`
+}
+
+/** Mensagens por código devolvido pela Edge Function, exceto `forbidden`. */
 const MENSAGENS: Record<string, string> = {
   email_exists: 'Já existe um usuário com este e-mail.',
-  forbidden: 'Somente administradores podem criar usuários.',
   no_session: 'Sessão expirada. Entre novamente.',
   invalid_payload: 'Dados inválidos. Confira os campos.',
   not_found: 'Usuário não encontrado.',
   missing_env:
-    'A função de criação de usuários está sem configuração. Procure o responsável técnico.',
+    'O serviço de usuários está sem configuração. Procure o responsável técnico.',
   invite_failed: 'Não foi possível enviar o convite por e-mail.',
 }
 
@@ -82,8 +122,13 @@ async function codigoDoErro(error: unknown): Promise<string | null> {
   return null
 }
 
-function mensagemDe(codigo: string | null): string {
+/**
+ * `forbidden` sai da tabela e é montado pela operação: é o único código cuja
+ * mensagem precisa dizer **o quê** foi recusado e **quem** recusou.
+ */
+function mensagemDe(codigo: string | null, op: Operacao): string {
   if (!codigo) return ERRO_GENERICO
+  if (codigo === 'forbidden') return recusaDaFuncao(op)
   return MENSAGENS[codigo] ?? ERRO_GENERICO
 }
 
@@ -93,7 +138,7 @@ export async function criarUsuario(
 ): Promise<UsuarioState> {
   const profile = await requireProfile()
   if (!canWrite(profile.role, 'usuarios')) {
-    return { ok: false, error: MENSAGENS.forbidden! }
+    return { ok: false, error: recusaDaAplicacao('criar') }
   }
 
   const parsed = criarUsuarioSchema.safeParse({
@@ -123,7 +168,7 @@ export async function criarUsuario(
   })
 
   if (error) {
-    return { ok: false, error: mensagemDe(await codigoDoErro(error)) }
+    return { ok: false, error: mensagemDe(await codigoDoErro(error), 'criar') }
   }
 
   // Convite por e-mail (USER_INVITE_EMAIL_ENABLED) não devolve senha. Hoje o
@@ -146,7 +191,7 @@ export async function regenerarSenha(
 ): Promise<UsuarioState> {
   const profile = await requireProfile()
   if (!canWrite(profile.role, 'usuarios')) {
-    return { ok: false, error: MENSAGENS.forbidden! }
+    return { ok: false, error: recusaDaAplicacao('regenerar') }
   }
 
   const parsed = regenerarSenhaSchema.safeParse({
@@ -165,7 +210,10 @@ export async function regenerarSenha(
   })
 
   if (error) {
-    return { ok: false, error: mensagemDe(await codigoDoErro(error)) }
+    return {
+      ok: false,
+      error: mensagemDe(await codigoDoErro(error), 'regenerar'),
+    }
   }
   if (!data?.password) {
     return { ok: false, error: ERRO_GENERICO }
@@ -211,7 +259,7 @@ export async function definirAcesso(
   // Hoje as duas capacidades resolvem para administrador, então a escolha não
   // muda comportamento — muda o que o código afirma estar fazendo.
   if (!canWrite(profile.role, 'usuarios')) {
-    return { ok: false, error: MENSAGENS.forbidden! }
+    return { ok: false, error: recusaDaAplicacao('acesso') }
   }
 
   const parsed = definirAcessoSchema.safeParse({

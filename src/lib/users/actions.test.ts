@@ -146,7 +146,9 @@ describe('criarUsuario — erros da Edge Function viram mensagem, nunca sucesso'
     const state = await criarUsuario({}, form(VALIDO))
 
     expect(state).toMatchObject({ ok: false })
-    expect('error' in state && state.error).toContain('administradores')
+    // Nomeia a ação e a camada: veio da função, não da guarda local.
+    expect('error' in state && state.error).toContain('criar usuários')
+    expect('error' in state && state.error).toContain('serviço de usuários')
   })
 
   it('500 missing_env não vira "tente novamente": é problema de configuração', async () => {
@@ -406,5 +408,102 @@ describe('definirAcesso — papel e entrada', () => {
     )
 
     expect(state).toMatchObject({ ok: false })
+  })
+})
+
+/**
+ * Correção do defeito que impediu o diagnóstico do bug de regeneração: as duas
+ * camadas devolviam o mesmo texto, e ainda por cima um texto que falava em
+ * criar usuários.
+ *
+ * Estes testes não protegem uma fronteira de segurança — protegem a
+ * **capacidade de diagnosticar** uma. Sem eles, a próxima unificação
+ * "simplificadora" das mensagens passa despercebida e leva junto a informação
+ * de qual camada recusou.
+ */
+describe('mensagem de recusa nomeia a ação', () => {
+  const OUTRO = '22222222-2222-4222-8222-222222222222'
+
+  it('regenerar não fala em criar usuários', async () => {
+    requireProfile.mockResolvedValue(CONSULTOR)
+
+    const state = await regenerarSenha({}, form({ userId: OUTRO }))
+
+    expect('error' in state && state.error).toContain('gerar nova senha')
+    expect('error' in state && state.error).not.toContain('criar')
+  })
+
+  it('alterar acesso não fala em criar usuários', async () => {
+    requireProfile.mockResolvedValue(CONSULTOR)
+
+    const state = await definirAcesso(
+      {},
+      form({ userId: OUTRO, ativo: 'false' }),
+    )
+
+    expect('error' in state && state.error).toContain('alterar o acesso')
+    expect('error' in state && state.error).not.toContain('criar')
+  })
+
+  it('criar continua falando em criar', async () => {
+    requireProfile.mockResolvedValue(CONSULTOR)
+
+    const state = await criarUsuario({}, form(VALIDO))
+
+    expect('error' in state && state.error).toContain('criar usuários')
+  })
+
+  it('a recusa vinda da função também nomeia a ação', async () => {
+    invoke.mockResolvedValue({
+      data: null,
+      error: respostaHttp(403, { error: 'forbidden' }),
+    })
+
+    const state = await regenerarSenha({}, form({ userId: OUTRO }))
+
+    expect('error' in state && state.error).toContain('gerar nova senha')
+  })
+})
+
+describe('as duas camadas nunca produzem o mesmo texto', () => {
+  const OUTRO = '22222222-2222-4222-8222-222222222222'
+
+  /**
+   * O teste que impede a regressão. Se um dia as duas frases voltarem a ser
+   * iguais, uma recusa observada na tela deixa de dizer qual camada disparou —
+   * que foi exatamente o que transformou o bug de regeneração numa
+   * investigação sem evidência.
+   */
+  async function recusaLocal(): Promise<string> {
+    requireProfile.mockResolvedValue(CONSULTOR)
+    const state = await regenerarSenha({}, form({ userId: OUTRO }))
+    return 'error' in state ? state.error : ''
+  }
+
+  async function recusaRemota(): Promise<string> {
+    requireProfile.mockResolvedValue(ADMIN)
+    invoke.mockResolvedValue({
+      data: null,
+      error: respostaHttp(403, { error: 'forbidden' }),
+    })
+    const state = await regenerarSenha({}, form({ userId: OUTRO }))
+    return 'error' in state ? state.error : ''
+  }
+
+  it('a recusa local e a da função são textos diferentes', async () => {
+    const local = await recusaLocal()
+    const remota = await recusaRemota()
+
+    expect(local).not.toBe('')
+    expect(remota).not.toBe('')
+    expect(local).not.toBe(remota)
+  })
+
+  it('a recusa local diz que nem chegou a enviar', async () => {
+    expect(await recusaLocal()).toContain('antes de enviar')
+  })
+
+  it('a recusa da função aponta para o serviço, não para a tela', async () => {
+    expect(await recusaRemota()).toContain('serviço de usuários')
   })
 })
