@@ -81,7 +81,7 @@ preview.
 | `SUPABASE_SERVICE_ROLE_KEY` | **não** | **não** | **não** | ver abaixo |
 | `SUPABASE_PROJECT_REF` | sim | não | não | só o CLI usa |
 | `SUPABASE_ACCESS_TOKEN` | sim | não | não | credencial de conta do CLI |
-| `SUPABASE_DB_PASSWORD` | sim | não | não | exigida por `db:push` |
+| `SUPABASE_DB_PASSWORD` | sim | não | não | só para acesso direto ao banco; `db:push` não é usado (D-031) |
 | `SUPABASE_TEST_*` | não | não | sim | projeto de teste descartável |
 | `CNPJ_*` | — | — | — | vazias até A-001 (Sprint 2) |
 

@@ -54,10 +54,32 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_PUBLIC_SITE_URL: http://localhost:3000
 
+      # Varre os DOIS diretórios. `.next/static` é o bundle do navegador;
+      # `.next/server` é o runtime do Next — e é ali que um serverEnv()
+      # reintroduzido apareceria, que é justamente o que D-030 proíbe. Checar só
+      # o primeiro deixava de fora o caso que a decisão existe para impedir.
+      #
+      # Procura o NOME DA VARIÁVEL, nunca o prefixo `sb_secret_` (D-035). O
+      # próprio @supabase/supabase-js carrega `e.startsWith("sb_secret_")` numa
+      # função de detecção de formato de chave, presente em
+      # .next/server/chunks/* de qualquer build: alargar o padrão deixaria esta
+      # etapa vermelha para sempre, e a saída mais rápida dali é alguém
+      # desligá-la.
+      #
+      # `grep -q` e não um pipe: o status de saída de um pipeline é o do ÚLTIMO
+      # comando, então `grep ... | head` devolveria 0 mesmo sem casar nada e a
+      # checagem passaria sempre.
       - name: Verificar vazamento da service role key no bundle
         run: |
-          if grep -rl "SUPABASE_SERVICE_ROLE_KEY" .next/static 2>/dev/null; then
-            echo "::error::Referência à service role key encontrada no bundle client."
+          falhou=0
+          for dir in .next/static .next/server; do
+            if [ -d "$dir" ] && grep -rq "SUPABASE_SERVICE_ROLE_KEY" "$dir"; then
+              echo "::error::Referência à service role key encontrada em $dir."
+              grep -rl "SUPABASE_SERVICE_ROLE_KEY" "$dir" || true
+              falhou=1
+            fi
+          done
+          if [ "$falhou" -ne 0 ]; then
             exit 1
           fi
-          echo "Nenhuma referência à service role key no bundle client."
+          echo "Nenhuma referência à service role key em .next/static nem em .next/server."
