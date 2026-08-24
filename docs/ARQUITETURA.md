@@ -202,10 +202,14 @@ Distinto de §10: aqui o código existe, mas nunca rodou contra o Supabase.
 | Item | Coberto por |
 | --- | --- |
 | Login, troca de senha, bloqueio de desativado | nada — nunca executado |
-| Edge Function `admin-create-user` | nada — nunca implantada |
-| Gate de cinco usuários | rodou contra Postgres local com dados de teste |
+| Edge Function `admin-create-user`, criação de usuário | implantada e recusando anônimo (`401 no_session`); o caminho completo exige sessão de administrador |
 | Persistência da importação | cliente dublado |
 | `e2e/auth.spec.ts` | nada — nunca executado |
+
+**O gate de cinco usuários saiu desta lista.** Rodou contra o banco real em
+24/08/2026, oito casos, todos OK — inclusive o de vínculo duplo, que devolveu as
+duas origens somadas. Resultado em `docs/sprints/SPRINT-1-REVISAO.md` §5.1;
+roteiro em `docs/sprints/SPRINT-1-GATE.md`.
 
 As onze migrations, essas sim, foram aplicadas e verificadas contra o banco real:
 **255 checagens**, todas OK.
@@ -213,9 +217,10 @@ As onze migrations, essas sim, foram aplicadas e verificadas contra o banco real
 ## 12. Ordem para destravar
 
 ```
-1. implantar a Edge Function admin-create-user
-2. criar os cinco usuários e seus vínculos
-3. rodar supabase/checks/0009_gate_cinco_usuarios.sql
-4. validar login, troca obrigatória de senha e bloqueio de desativado
-5. criar o projeto na Vercel e preencher esta seção §10
+1. [x] implantar a Edge Function admin-create-user
+2. [x] criar os cinco usuários e seus vínculos
+3. [x] rodar o gate — supabase/checks/GATE_painel.sql
+4. [ ] criar o projeto na Vercel e preencher esta seção §10
+5. [ ] validar login, troca obrigatória de senha e bloqueio de desativado
+6. [ ] rodar e2e/auth.spec.ts contra a aplicação no ar
 ```

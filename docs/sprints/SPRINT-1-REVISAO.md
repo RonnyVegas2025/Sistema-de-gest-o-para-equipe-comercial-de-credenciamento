@@ -5,6 +5,10 @@ Entregue ao término da **etapa 9**, conforme `SPRINT-1.md`.
 > **Revisão retornada e liberada.** As decisões estão na seção 9. As etapas 10 e
 > 11 foram executadas depois: `docs/ARQUITETURA.md` descreve o que ficou
 > implementado, e a validação em navegador está registrada abaixo, na seção 7.
+>
+> **Gate executado contra o banco real em 24/08/2026 — oito casos, todos OK.**
+> Saiu da seção 6 e está na seção 5.1. O que resta na seção 6 depende todo da
+> aplicação no ar, que é o passo seguinte ao merge.
 
 Branch: `sprint-1/fundacao`. A contagem de commits muda a cada correção, então
 não é fixada aqui — use `git rev-list --count origin/main..HEAD`.
@@ -17,6 +21,7 @@ A sprint foi executada com uma separação que vale carregar para a revisão:
 
 | Nível | O que significa |
 | --- | --- |
+| **Provado contra o banco do projeto** | rodou no Supabase real, pelo SQL Editor |
 | **Provado contra Postgres real** | rodou num cluster PostgreSQL, com asserção sobre o resultado |
 | **Provado por mutação** | além de rodar, o código foi quebrado de propósito e o teste reprovou |
 | **Coberto com dublê** | a lógica foi exercitada com dependência simulada |
@@ -215,25 +220,70 @@ Verificado contra Postgres real:
 
 ---
 
+## 5.1 Gate de cinco usuários — **contra o banco real**
+
+**Executado no projeto `oywwcwkkwsrgzgkegifn`, pelo SQL Editor do painel, em
+24/08/2026.** Saiu da seção 6 e entrou aqui: deixou de ser script pronto e
+passou a ser resultado.
+
+Roteiro em `docs/sprints/SPRINT-1-GATE.md`; estrutura montada por
+`supabase/seed/gate_estrutura.sql`; gate em `supabase/checks/GATE_painel.sql`.
+
+| # | Caso | Esperado | Obtido | |
+| --- | --- | --- | --- | --- |
+| 1 | consultor | 1 | 1 | ✅ |
+| 2 | gestor | 2 | 2 | ✅ |
+| 3 | diretor | 3 | 3 | ✅ |
+| 4 | administrador | 5 | 5 | ✅ |
+| 5 | **vínculo duplo** | 2 | 2 | ✅ |
+| 6 | sem vínculo | 0 | 0, sem erro | ✅ |
+| 7 | fora do alcance do gestor | 3 | 3 | ✅ |
+| 8 | união conferida à mão | 2 | 2 | ✅ |
+
+**O caso 5 é o que sustenta os outros sete.** Voltou com `Consultor do Duplo` e
+`Gestor Duplo` — as duas origens somadas, não a primeira encontrada. O usuário
+está vinculado como consultor a uma equipe que **não** gerencia; fosse a própria,
+o conjunto de gestor já o conteria e a união seria indistinguível do erro.
+
+Isso confirma no banco real o que a prova por mutação tinha mostrado no cluster
+de teste: trocando `scoped_seller_ids()` por "primeiro papel encontrado", os
+casos 1, 2, 3, 4, 6 e 7 passam **idênticos** — só o 5 cai de 2 para 1, e o 8
+junto. D-005 deixou de ser afirmação.
+
+**O caso 7 é o contraprova.** O gestor não alcança `Consultor de Fora` nem
+`Gestor Duplo`. Sem ele, uma função que devolvesse tudo passaria nos casos 1 a 5
+por acidente.
+
+### Edge Function `admin-create-user` — implantada
+
+No ar no painel, respondendo `401 {"error":"no_session"}` a POST sem
+`Authorization`. Prova três coisas: está implantada, executa, e a camada 3a
+recusa chamador anônimo **antes** de instanciar a service role.
+
+O que ainda não rodou dela é o caminho completo — criar usuário de verdade, com
+sessão de administrador. Isso depende da aplicação no ar e segue na seção 6.
+
+---
+
 ## 6. O que NÃO rodou
 
 **Esta é a seção que a revisão precisa ler com atenção.**
 
 | Item | Estado | Depende de |
 | --- | --- | --- |
-| **Gate de cinco usuários no banco real** | script pronto, nunca executado lá | Edge Function implantada + cinco usuários criados |
-| Login real | nunca rodou | mesma coisa |
-| Troca obrigatória de senha ponta a ponta | nunca rodou | mesma coisa |
-| Bloqueio de usuário desativado em sessão | nunca rodou | mesma coisa |
-| Edge Function `admin-create-user` | copiada, nunca implantada nem executada | deploy |
+| Login real | nunca rodou | aplicação no ar |
+| Troca obrigatória de senha ponta a ponta | nunca rodou | aplicação no ar |
+| Bloqueio de usuário desativado em sessão | nunca rodou | aplicação no ar |
+| Edge Function `admin-create-user` — criação de usuário | implantada e recusando anônimo; o caminho completo nunca rodou | sessão de administrador, ou seja, aplicação no ar |
 | `e2e/auth.spec.ts` | adaptado, nunca executado | app rodando contra Supabase |
 | Persistência da importação | coberta só com dublê | PostgREST real |
 | Carga da estrutura comercial | não aconteceu | exportação do Painel |
 | Cenários de §6.1 com recorte | não verificáveis | Sprint 2 |
 | Deploy na Vercel | não feito | decisão de adiar |
 
-O gate de cinco usuários **rodou aqui com dados de teste** e passou nos sete
-casos, incluindo conferência independente da união. Contra o banco real, não.
+O gate de cinco usuários **saiu desta seção** — rodou contra o banco real e está
+na seção 5.1. O que resta aqui depende todo da mesma coisa: a aplicação no ar.
+É o próximo passo, depois do merge.
 
 ---
 
