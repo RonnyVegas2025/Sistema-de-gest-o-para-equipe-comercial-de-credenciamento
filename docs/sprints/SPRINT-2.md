@@ -90,7 +90,8 @@ nunca é editada; correção é migration nova.
 ```
 1  Tela de usuários                      sem migration
 1b Desativar e reativar acesso           sem migration
-1c Diagnóstico de recusa na função       sem migration · bloqueada
+1c Diagnóstico de recusa na função       sem migration · programada
+1d Bug de regeneração                    encerrado · não reproduzível
 2  Correção do CI                        sem migration
 3  0012  companies                       leitura ampla, exceção documentada
 4  Contrato CnpjProvider                 sem migration
@@ -208,7 +209,7 @@ Quando existir, entra como migration própria.
 
 ---
 
-## 1c · Pendente — a Edge Function distinguir "não é admin" de "não consegui verificar"
+## 1c · Programada, sem urgência — a Edge Function distinguir "não é admin" de "não consegui verificar"
 
 Achado ao investigar um bug relatado na etapa 1: regenerar senha recusando um
 administrador legítimo, com a mensagem de criação de usuários.
@@ -242,8 +243,42 @@ de mentir sobre o motivo.
 *Aceite:* reproduzir os dois caminhos e ver códigos diferentes; o log da função
 registrando o erro real da leitura.
 
-**Bloqueada até o log da invocação que falhou ser lido** — sem ele não se sabe
-se este defeito é a causa do bug relatado ou um segundo defeito independente.
+**O log foi lido, e este defeito NÃO era a causa do bug relatado** — não houve
+bug (ver 1d). A etapa segue programada pelo mérito próprio, sem urgência: falha
+de infraestrutura indistinguível de negação de permissão faz alguém depurar
+permissão por horas enquanto o problema é conexão. Entra quando houver outra
+razão para repastar a função no painel.
+
+---
+
+## 1d · Encerrada — bug de regeneração de senha, não reproduzível
+
+**Relato:** logado como administrador, "Gerar nova senha" respondia *"Somente
+administradores podem criar usuários"*.
+
+**Resultado: não havia bug de permissão.** Testado depois da correção de
+mensagem, o fluxo funcionou — o consultor recebeu a senha temporária e trocou
+sem erro.
+
+O que estava na tela era um `Alert` **pendurado de uma submissão anterior**,
+provavelmente da janela de deploy. `useFormState` guarda o último retorno e não
+oferece reset, então a mensagem sobrevivia a `revalidatePath`, a re-render e a
+qualquer outra interação.
+
+**Encerrado como não reproduzível, por evidência contaminada.** O encadeamento
+completo está em **D-037**, e vale ler inteiro: a mensagem ambígua consumiu uma
+rodada, e o log da Edge Function foi lido para explicar um evento que não
+ocorreu.
+
+Duas correções saíram daqui, e **as duas entram por mérito próprio, sem bug para
+consertar**:
+
+| | |
+| --- | --- |
+| Mensagem por ação e por camada | uma recusa passa a dizer quem recusou |
+| `useFeedbackDescartavel` | estado de formulário deixa de fabricar evidência |
+
+A terceira, a da Edge Function, virou a etapa 1c acima.
 
 ---
 

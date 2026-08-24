@@ -1068,6 +1068,63 @@ motivo e autoria. A proposta está no plano da Sprint 2.
 
 ---
 
+## D-037 — Estado de formulário não sobrevive à interação seguinte
+
+**Contexto — o encadeamento completo, porque a lição está nele.**
+
+Um bug foi relatado na tela de usuários: logado como administrador, "Gerar nova
+senha" respondia *"Somente administradores podem criar usuários"*. Dois defeitos
+aparentes — a ação falhava para quem tinha permissão, e a mensagem descrevia
+outra ação.
+
+A investigação consumiu uma rodada inteira:
+
+1. A mensagem era **uma só, escrita para criação**, e saía de cinco pontos: as
+   três guardas locais e as duas traduções da resposta da Edge Function. Uma
+   recusa na tela não dizia qual camada disparou.
+2. Foi lido o log de invocações da Edge Function para desempatar. Ele mostrava
+   **nenhuma chamada no horário**, o que apontava para a guarda local.
+3. Só que as duas guardas — criar e regenerar — são **byte a byte idênticas**, e
+   a criação havia passado minutos antes. A contradição não fechava.
+4. **Nunca houve recusa.** Testada depois, a regeneração funcionou: o consultor
+   recebeu a senha temporária e trocou sem erro.
+
+O que estava na tela era um `Alert` **pendurado de uma submissão anterior**,
+provavelmente da janela de deploy. `useFormState` guarda o último retorno da
+action e não oferece reset: a mensagem sobrevive a `revalidatePath`, a re-render
+e a qualquer outra interação, até uma nova submissão *daquela mesma action*.
+
+**Foi lido um log para explicar um evento que não ocorreu.**
+
+**Decisão.** Feedback de formulário pertence à interação que o produziu, e a
+interação seguinte o encerra — abrir diálogo, fechar, cancelar, confirmar.
+Implementado em `useFeedbackDescartavel`, aplicado aos três formulários da tela
+de usuários e obrigatório nos que vierem.
+
+**Por que a correção entra por mérito próprio, sem bug para consertar.** Estado
+de formulário que sobrevive à interação seguinte não é ruído visual: **é
+instrumento de medida quebrado**. Ele fabrica evidência, e evidência fabricada
+custa rodada de investigação — aqui custou uma inteira, mais a leitura de um log.
+A ausência de bug não torna a correção opcional.
+
+**O achado que vale mais que a correção.** A etapa 1 já tinha esbarrado neste
+defeito: `senhaFechada` era um controle paralelo, criado para o diálogo de senha
+sumir ao fechar. **Um contorno local para um defeito de padrão deixa o padrão
+intacto e esconde o sintoma no único lugar onde alguém olharia.** Os outros dois
+formulários seguiram pendurando mensagem, e um deles produziu a evidência falsa.
+Virou regra no `CLAUDE.md`: quando um contorno local resolver um sintoma,
+perguntar se o mesmo defeito existe nos irmãos antes de seguir.
+
+**O que ficou coberto e o que não.** A semântica do descarte e a fiação dos
+diálogos têm teste, provados por mutação. **A submissão real não tem**:
+`useFormState` com action-função depende do suporte a form actions do React que
+o Next embarca, e o `react-dom` do `node_modules` não tem — verificado com um
+spike, não suposto. Cobrir exigiria dependência nova. Cobertura declarada e
+inexistente é pior que ausência assumida, então a ausência está escrita no
+arquivo de teste.
+
+---
+
 # Decisões em aberto
 
 | # | Assunto | Quando decidir |

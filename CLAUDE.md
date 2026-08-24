@@ -99,6 +99,15 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
   o teste, quebrar o código de propósito, confirmar que reprova, restaurar.
   Sem isso o teste é uma afirmação, não uma garantia — e teste de segurança que
   passa por vacuidade é pior que teste nenhum, porque cria confiança.
+- **Contorno local para sintoma é sinal de defeito de padrão — procurar os
+  irmãos antes de seguir.** Quando uma correção pontual resolve o sintoma num
+  lugar, perguntar se o mesmo defeito existe nos casos análogos. O remendo deixa
+  a causa intacta e, pior, **esconde o sintoma justamente onde alguém olharia** —
+  o próximo a aparecer virá de outro lugar, sem o rastro que levaria à origem.
+  Caso real: `senhaFechada` escondia o diálogo de senha ao fechar, contornando
+  estado de formulário que nunca era limpo. Os outros dois formulários da mesma
+  tela seguiram pendurando mensagem, e uma delas fabricou evidência de um bug
+  que não existia (D-037).
 - **Quando um teste de recusa passar, confirmar por QUAL recusa ele passou.**
   Um teste que reprova pelo motivo errado — validação de formato disparando
   antes da checagem de identidade, papel recusado antes da regra que se queria
