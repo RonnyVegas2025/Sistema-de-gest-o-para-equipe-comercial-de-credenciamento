@@ -77,7 +77,7 @@ preview.
 | --- | :---: | :---: | :---: | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | sim | sim | sim | pública |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | sim | sim | sim | pública por desenho — a proteção é a RLS |
-| `NEXT_PUBLIC_SITE_URL` | sim | sim | sim | difere por escopo; alimenta os redirects de e-mail |
+| `NEXT_PUBLIC_SITE_URL` | sim | sim | sim | difere por escopo; alimenta o redirect do e-mail de recuperação |
 | `SUPABASE_SERVICE_ROLE_KEY` | **não** | **não** | **não** | ver abaixo |
 | `SUPABASE_PROJECT_REF` | sim | não | não | só o CLI usa |
 | `SUPABASE_ACCESS_TOKEN` | sim | não | não | credencial de conta do CLI |
@@ -172,5 +172,44 @@ a matriz de permissões em silêncio.
 
 ## Deploy
 
-Vercel, com Framework Preset **Next.js**. Preset em "Other" produz 404 com build
-limpo e log de runtime vazio — sintoma que não aponta para a causa.
+Produção: **https://sistema-de-gest-o-para-equipe-comer.vercel.app**
+
+| Ajuste | Valor |
+| --- | --- |
+| Framework Preset | **Next.js** |
+| Root Directory | `./` |
+| Build / Install / Output | padrão, sem override |
+| Node.js Version | **22.x** |
+| Function Region | **`gru1`** (São Paulo) |
+
+Preset em "Other" produz 404 com build limpo e log de runtime vazio — sintoma
+que não aponta para a causa.
+
+**A região não é preferência.** O Supabase está em `sa-east-1`, e toda rota do
+CRM é `ƒ (Dynamic)`: o middleware valida a sessão a cada request, o que
+significa uma ida ao banco por request. Funções fora de São Paulo somam latência
+a cada uma delas, sem nada em troca.
+
+**Node 22 é declarado em `engines`, mas fixe no painel também.** A Vercel às
+vezes respeita o campo e às vezes não.
+
+### Depois de trocar a URL de produção
+
+Duas coisas param de funcionar em silêncio se você esquecer:
+
+1. **Vercel** — `NEXT_PUBLIC_SITE_URL` e **redeploy**. Variável `NEXT_PUBLIC_*`
+   é embutida no build; mudar sem redeploy não muda nada.
+2. **Supabase → Authentication → URL Configuration** — Site URL e Redirect URLs.
+   Sem isso o link do e-mail de recuperação é recusado no retorno:
+
+   ```
+   Site URL:  https://sistema-de-gest-o-para-equipe-comer.vercel.app
+
+   Redirect URLs:
+     https://sistema-de-gest-o-para-equipe-comer.vercel.app/auth/callback
+     https://<projeto>-*.vercel.app/auth/callback     ← curinga para previews
+     http://localhost:3000/auth/callback
+   ```
+
+O `additional_redirect_urls` do `supabase/config.toml` vale só para o stack
+local (`supabase start`), não para o projeto hospedado.
