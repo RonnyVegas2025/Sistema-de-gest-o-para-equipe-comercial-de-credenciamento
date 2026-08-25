@@ -1125,6 +1125,43 @@ arquivo de teste.
 
 ---
 
+## D-038 — Scripts de verificação são afirmações de momento, e rodam intercalados
+
+**Contexto.** Ao reconstruir o cluster local do zero, os onze scripts de
+`supabase/checks/` foram rodados de uma vez, no fim. **Cinco reprovaram** — e o
+primeiro impulso foi ler aquilo como migration irreprodutível.
+
+Não era. As onze migrations aplicaram sem um único erro. Quem falhou foi a
+leitura: além de conferir o que a migration criou, vários scripts afirmam o que
+ainda **não** deve existir naquele ponto da sequência:
+
+```
+0001  nenhuma coluna a mais que o modelo      -> must_change_password é da 0002
+0003  current_manager_id ainda SEM FK         -> a FK fecha na 0005
+0006  source_ref ainda NÃO existe             -> é da 0007
+```
+
+São verdadeiras logo após a própria migration e falsas depois que a seguinte
+roda.
+
+**Decisão.** Isso é propriedade desejada, não defeito. **É o que pega migration
+que faz mais do que declara** — uma coluna a mais, uma FK antecipada, um índice
+que veio junto sem estar no plano. Um script que só conferisse presença deixaria
+isso passar.
+
+A consequência é operacional: **verificação roda logo depois da sua migration,
+nunca no fim de tudo.** É como já se usava no painel — aplicar, verificar,
+seguir (D-031) —, e agora está assim também em
+`supabase/dev/reconstruir.sh --checks`.
+
+**Por que isto está escrito.** A leitura errada é atraente: cinco scripts
+vermelhos parecem defeito de schema, e o caminho curto dali é "relaxar" as
+asserções de ausência para o lote passar. Isso removeria justamente a parte que
+detecta migration fazendo mais do que declara — trocando um alarme correto por
+silêncio conveniente.
+
+---
+
 # Decisões em aberto
 
 | # | Assunto | Quando decidir |
