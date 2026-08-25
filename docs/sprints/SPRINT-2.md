@@ -96,7 +96,9 @@ nunca é editada; correção é migration nova.
 3  0012  companies                       leitura ampla, exceção documentada
 4  Contrato CnpjProvider                 sem migration
 5  0013  relacionamento + enums          primeiro enforcement real do recorte
-6  0014  crm_contacts                    recorte transitivo
+5b 0014  vínculo de demanda + marcadores requisito da diretoria (D-041)
+5c Página Novos Comércios                sem migration · prazo de uma semana
+6  0015  crm_contacts                    recorte transitivo · REORDENADA
 7  Página do estabelecimento             sem migration
 8  Bateria de RLS §6.1                   sem migration
 9  Verificação final e documentação      sem migration
@@ -389,7 +391,66 @@ faz o script reprovar; restaurado em seguida.
 
 ---
 
-## 6 · Migration `0014` — `crm_contacts`
+## 5b · Migration `0014` — vínculo de demanda e marcadores de papel
+
+**Requisito acrescentado pela diretoria durante a sprint.** Avaliado pelo
+protocolo do `CLAUDE.md` e registrado em **D-041**; a fronteira do dado
+financeiro que ele levanta está em **D-040**.
+
+- marcadores `is_merchant` e `is_client_company` em `companies`,
+  `not null default false`, **nunca inferidos** — migration nova, jamais edição
+  da `0012`, que já está aplicada em produção;
+- vínculo de demanda N:N entre comércio e empresa cliente, guardando **apenas
+  origem**: quem demandou e quando;
+- previsão de faturamento no **comércio**, não no vínculo — a comissão é paga
+  uma única vez por comércio, mesmo com várias empresas demandando;
+- trilha própria da entidade e **recorte pelo comércio** (D-041, decisão 5).
+
+Nasce com recorte na mesma migration, pela regra inegociável desta sprint.
+
+*Aceite:* script de verificação com todas as linhas `OK`, incluindo o recorte
+literal, e as cinco mutações de barreira reprovando. Mais uma asserção própria:
+**um comércio sem demandante é registro válido** — se a estrutura exigir vínculo
+para o comércio existir, as ações de melhoria de rede ficam de fora do sistema.
+
+---
+
+## 5c · Página "Novos Comércios"
+
+Importação de planilha pelo motor da Sprint 1, cadastro manual com consulta de
+CNPJ (etapa 4), vínculo à empresa demandante, consultor responsável e previsão
+de faturamento.
+
+### O que esta entrega NÃO é
+
+**A página entrega o elo, não a comparação.** A pergunta da diretoria é *"o
+credenciamento se paga, e em quantos meses?"*, e responder exige quatro entradas:
+comissão paga, movimentação realizada, taxa administrativa e o vínculo. **Esta
+etapa entrega a quarta.** As outras três seguem em planilha.
+
+Está escrito aqui porque o modo de falhar é específico e silencioso: a tela fica
+pronta, todo mundo vê o vínculo aparecendo, e a pergunta segue sem resposta com
+a sensação de que foi endereçada. A análise manual em paralelo é o que responde à
+diretoria nesse meio-tempo, e ela não é contingência — é o caminho certo para o
+prazo.
+
+**E o vínculo não entra na conta econômica.** O spread é do comércio e agrega
+todas as empresas que o usam (D-041). O que o vínculo responde é outra coisa, e é
+a objeção real: quantos credenciamentos nasceram de demanda e quantos de
+ampliação de rede.
+
+*Aceite:* os cinco estados; importação com prévia obrigatória; um comércio
+cadastrado sem demandante; alvo de toque de 44 px.
+
+---
+
+## 6 · Migration `0015` — `crm_contacts`
+
+**Renumerada de `0014` para `0015`** pela entrada do vínculo de demanda (D-041).
+Contatos não participa da página "Novos Comércios", não tem dependente naquele
+requisito, e mover não quebra a regra de recorte — o recorte de contatos depende
+do relacionamento, que continua antes. É a terceira emenda de numeração;
+`reconstruir.sh` reprova quem aplicar fora de ordem.
 
 **A inversão em relação a `MODELO_DADOS.md` §8 acontece aqui, e o motivo está
 registrado como emenda naquele documento.** A ordem proposta trazia `crm_contacts`
