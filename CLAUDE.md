@@ -149,6 +149,13 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
 - Toda função de trilha: `security definer` + `set search_path = public` +
   `revoke execute from public, authenticated`. **Uma por entidade** — gravador
   genérico de histórico anula a imutabilidade.
+- **`security definer` é resposta a um problema específico, não estilo de casa.**
+  Ele existe onde a função precisa **atravessar** a RLS — trilha que escreve em
+  tabela sem policy de INSERT, resolução de escopo que leria a si mesma. Função
+  de **validação** não atravessa nada: recusa ou deixa passar, com os
+  privilégios de quem chamou. Copiar a assinatura por hábito amplia superfície
+  sem ganho, e ainda faz o Security Advisor apontar um lint que não tem
+  explicação — o que ensina a ignorar os que têm.
 - **`from public, authenticated` são os dois, não um.** Revogar só de
   `authenticated` é inócuo: o grant implícito de `PUBLIC` sustenta o privilégio,
   e nada dá sinal — a trilha continua gravando. Ver `RLS_PERMISSOES.md` §5.6.
