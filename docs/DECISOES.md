@@ -1162,6 +1162,47 @@ silêncio conveniente.
 
 ---
 
+## D-039 — CNPJ em formato canônico, imposto pelo banco
+
+**Contexto.** `companies_cnpj_active_unique` é a barreira contra cadastro
+duplicado de estabelecimento. Ela é um índice único sobre a coluna `cnpj`, e um
+índice compara **texto**: `'12.345.678/0001-90'` e `'12345678000190'` são dois
+valores diferentes, e os dois entram.
+
+**Decisão.** O banco impõe o formato:
+
+```sql
+check (cnpj is null or cnpj ~ '^[0-9]{14}$')
+```
+
+Quatorze dígitos, sem pontuação, ou nulo.
+
+**Por que no banco e não só na aplicação.** Sem a constraint, a unicidade passa a
+depender de **todo** chamador normalizar — importação, tela de cadastro,
+integração de consulta de CNPJ, API futura. Basta um esquecer para o duplicado
+entrar **sem erro nenhum**: nada falha, nada avisa, e o sistema passa a ter dois
+estabelecimentos que são o mesmo.
+
+É o cenário que D-006 e D-016 existem para impedir. D-006 diz que o consultor
+não é dono do CNPJ e que CNPJ já cadastrado **não gera erro de duplicidade** — o
+sistema recupera o estabelecimento e informa a situação. Isso só funciona se o
+banco souber o que é "o mesmo CNPJ".
+
+**Consequência aceita, escrita porque é a parte que morde.** Normalizar passa a
+ser responsabilidade de quem escreve, e o banco **recusa** o que não estiver
+canônico. Isso custa tratamento de erro na tela de cadastro e no motor de
+importação — uma planilha com CNPJ pontuado falha em vez de entrar torta.
+
+É o custo certo. Duplicata silenciosa custa mais, e cobra depois, quando dois
+consultores já trabalharam o mesmo estabelecimento por caminhos diferentes.
+
+**O que a constraint NÃO faz.** Não valida dígito verificador. Formato canônico
+é sobre comparabilidade — que o índice enxergue igualdade —, não sobre o CNPJ
+existir. Validação de DV, se entrar, é da aplicação ou do fornecedor de consulta
+(D-008), e não substitui esta constraint.
+
+---
+
 # Decisões em aberto
 
 | # | Assunto | Quando decidir |

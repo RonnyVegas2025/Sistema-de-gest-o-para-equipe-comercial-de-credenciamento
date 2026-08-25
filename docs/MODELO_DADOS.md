@@ -224,7 +224,7 @@ Identidade estável do estabelecimento. **Sem coluna de responsável** (D-006).
 id                      uuid PK
 legal_name              text not null
 trade_name              text
-cnpj                    text                -- só dígitos
+cnpj                    text                -- 14 dígitos, imposto por CHECK (D-039)
 legacy_customer_code    text                -- reconciliação com legado
 parent_company_id       uuid → companies(id)
 relationship_start_date date                -- desde quando há relacionamento
@@ -261,6 +261,11 @@ carga retroativa qualquer métrica de "novos no mês" mente se usar `created_at`
 também ocorre em carga mal preenchida. A classificação é explícita, em 4.1.
 
 ```sql
+-- Formato canônico: sem ele o índice único abaixo não enxerga
+-- '12.345.678/0001-90' e '12345678000190' como o mesmo CNPJ (D-039).
+alter table companies add constraint companies_cnpj_canonico
+  check (cnpj is null or cnpj ~ '^[0-9]{14}$');
+
 create unique index companies_cnpj_active_unique on companies (cnpj)
   where status = 'ativo' and cnpj is not null;
 create index companies_status_idx on companies (status);
