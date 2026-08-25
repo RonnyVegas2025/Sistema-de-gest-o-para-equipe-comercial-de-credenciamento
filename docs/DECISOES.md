@@ -1296,11 +1296,17 @@ Previsão de faturamento e comissão pertencem ao **comércio**, não ao víncul
 porque **a comissão é paga uma única vez por comércio**, mesmo com várias
 empresas demandando.
 
-**Decisão 4 — comércio pode existir sem demandante.**
+**Decisão 4 — CORRIGIDA POR D-042.**
 
-Acontece em ações de melhoria de rede: o consultor amplia a oferta antes de
-visitar empresas. Por isso o vínculo **não pode ser o registro de "é comércio"** —
-daí o marcador explícito da decisão 1.
+O texto original dizia que comércio pode existir sem demandante. **Está errado.**
+Credenciamento sem demandante não existe; o que existe é demanda de origem
+diferente — empresa cliente, melhoria de rede/Pós-Vendas, melhoria de
+rede/Venda Nova. Ver **D-042**.
+
+A conclusão prática sobrevive à correção, por outro motivo: o vínculo continua
+não podendo ser o registro de "é comércio", porque agora ele **sempre** existe e
+o que varia é o tipo de alvo. O marcador explícito da decisão 1 segue
+necessário.
 
 **Decisão 5 — o recorte do vínculo é pelo comércio.**
 
@@ -1319,6 +1325,132 @@ O vínculo responde outra coisa, e é a pergunta que a diretoria fez de fato:
 **quantos credenciamentos nasceram de demanda real e quantos de ampliação de
 rede.** Comércio sem demandante não é caso de borda — é uma das duas categorias
 que a objeção "está descolado da venda" implicitamente separa.
+
+---
+
+## D-042 — Origem da demanda de credenciamento
+
+**Corrige uma premissa de D-041.** Aquela decisão registrou que "comércio pode
+existir sem demandante". Está errado: **credenciamento sem demandante não
+existe.** O que existe é demanda de **origem diferente**.
+
+| Origem | Alvo |
+| --- | --- |
+| Empresa cliente | uma empresa nomeada solicitou |
+| Melhoria de rede — Pós-Vendas | ampliar a rede para contratos existentes |
+| Melhoria de rede — Venda Nova | consultor amplia a oferta antes de prospectar |
+
+**Melhoria de rede tem propósito econômico:** ampliar a rede aumenta o
+faturamento dos cartões de contratos que já temos. É **alvo difuso, não ausência
+de alvo**. Por isso **todo comércio tem origem**, e comércio sem origem passa a
+ser exceção a investigar — não estado normal.
+
+### Decisão 1 — catálogo em tabela, não enum
+
+Critério de D-011, aplicado literalmente: a lista deve ser mantida pelo gestor.
+Campanha sazonal e reativação de comércio inativo são candidatas plausíveis, e
+com enum cada uma custaria `alter type add value` mais deploy.
+
+`crm_demand_origins` segue o padrão de `crm_loss_reasons`: `match_key` estável
+separado do `name` exibido, porque "Melhoria de Rede — Pós-Vendas" vai ser
+renomeado e o `match_key` não.
+
+### Decisão 2 — a regra estrutural vem de uma flag no catálogo
+
+`requires_client_company` na linha da origem, lida por trigger.
+
+**Por que não um CHECK.** Uma constraint não lê outra tabela. As alternativas
+eram copiar o discriminador para a linha do vínculo — **segunda fonte de
+verdade**, e uma linha com origem "Pós-Vendas" e discriminador "empresa_cliente"
+seria aceita pelo banco e mentiria — ou deixar a regra só na aplicação, o que não
+alcança a importação de planilha, que escreve direto.
+
+Trigger é o mecanismo já estabelecido no projeto para regra que constraint não
+alcança. E o paralelo com D-011 é exato, inclusive no motivo: lá a
+obrigatoriedade de `loss_notes` vem de `requires_notes` na linha do catálogo, e
+**não** de comparação com o literal `'outro'`, que quebraria num rename.
+
+### Decisão 3 — o trigger recusa nas DUAS direções
+
+Bicondicional, não implicação:
+
+```
+requires_client_company = true   →  client_company_id NOT NULL, ou recusa
+requires_client_company = false  →  client_company_id NULL,     ou recusa
+```
+
+Uma linha "melhoria de rede" com empresa preenchida por engano é **ambígua para a
+única pergunta que o vínculo existe para responder**. Conta como demanda nomeada
+ou não? Qualquer resposta que a contagem der estará errada para metade dos
+leitores.
+
+E o erro é invisível: **a linha com todos os campos preenchidos parece mais
+completa que as corretas.** É o pior tipo de dado errado — o que aparenta
+qualidade.
+
+### Decisão 4 — a demandante precisa ter `is_client_company`
+
+Sem isso, nada impediria apontar **um comércio como demandante de si mesmo**, e
+essa linha passaria por todas as outras validações.
+
+---
+
+## O que este trigger NÃO faz
+
+Três limites, escritos porque cada um é um lugar onde alguém confiaria no banco
+para coisa que ele não faz.
+
+**1. Verifica presença e papel, não pertinência.** Ele exige que exista uma
+empresa e que ela seja `is_client_company`. **Não verifica se é a empresa
+certa.** Apontar a demandante errada — empresa B no lugar da A — passa por todas
+as validações. Isso é **conferência humana**, e continua sendo.
+
+**2. Se a empresa perder a flag depois, as demandas antigas permanecem.** O
+trigger roda na escrita; linhas gravadas quando `is_client_company` era verdadeiro
+continuam lá quando alguém desmarcar.
+
+**Isso está certo: histórico não se reescreve.** Uma empresa deixar de ser
+cliente hoje não desfaz a demanda que ela fez ano passado — é o mesmo princípio
+de D-022, onde encerrar não é apagar.
+
+Está escrito porque o impulso de "corrigir com uma varredura" é forte, e a
+varredura destruiria o registro de que aquela demanda existiu — justamente o dado
+que a diretoria pediu.
+
+**3. A flag governa estrutura, não verdade.** Diz se o campo deve estar
+preenchido; não diz se o conteúdo corresponde ao que aconteceu.
+
+---
+
+## Decisão 5 — o que fica no vínculo
+
+```
+crm_accreditation_demands
+  merchant_company_id     o comércio · o recorte passa por aqui (D-041)
+  origin_id               → crm_demand_origins
+  client_company_id       nulo conforme a flag
+  requested_at
+  responsible_seller_id   nulável · quem CONDUZIU a ação
+  team_id                 nulável · quando a ação foi de equipe
+```
+
+`responsible_seller_id` e `team_id` **não são** o responsável pelo comércio, que
+vive em `crm_company_relationships`. São dois fatos diferentes: quem responde
+pelo estabelecimento, e quem conduziu aquela ação. Numa melhoria de rede a
+atribuição da ação é justamente o que interessa, e sobrepor os dois a perderia.
+
+## Decisão 6 — "todo comércio tem origem" NÃO vira constraint
+
+É regra de cardinalidade mínima — "pelo menos uma linha filha" —, que FK não
+expressa. Forçá-la quebraria a importação, que escreve o comércio antes da
+demanda.
+
+**Vira exceção visível: contador no topo da página, por padrão — não filtro.**
+Exceção que só aparece quando procurada não é exceção monitorada.
+
+Barrar estruturalmente transformaria dado a corrigir em registro perdido, e **o
+que não entra não aparece para ser corrigido**. Na carga inicial isso
+significaria descartar exatamente as linhas que precisam de atenção.
 
 ---
 

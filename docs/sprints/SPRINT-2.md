@@ -400,8 +400,12 @@ financeiro que ele levanta está em **D-040**.
 - marcadores `is_merchant` e `is_client_company` em `companies`,
   `not null default false`, **nunca inferidos** — migration nova, jamais edição
   da `0012`, que já está aplicada em produção;
-- vínculo de demanda N:N entre comércio e empresa cliente, guardando **apenas
-  origem**: quem demandou e quando;
+- **catálogo `crm_demand_origins`**, semeado com as três origens, com
+  `match_key` estável e a flag `requires_client_company` (D-042);
+- vínculo de demanda N:N guardando **apenas origem**: qual origem, qual empresa
+  quando houver, quando, e quem conduziu a ação;
+- **trigger bicondicional** lendo a flag do catálogo, mais a checagem de que a
+  demandante tem `is_client_company`;
 - previsão de faturamento no **comércio**, não no vínculo — a comissão é paga
   uma única vez por comércio, mesmo com várias empresas demandando;
 - trilha própria da entidade e **recorte pelo comércio** (D-041, decisão 5).
@@ -409,9 +413,21 @@ financeiro que ele levanta está em **D-040**.
 Nasce com recorte na mesma migration, pela regra inegociável desta sprint.
 
 *Aceite:* script de verificação com todas as linhas `OK`, incluindo o recorte
-literal, e as cinco mutações de barreira reprovando. Mais uma asserção própria:
-**um comércio sem demandante é registro válido** — se a estrutura exigir vínculo
-para o comércio existir, as ações de melhoria de rede ficam de fora do sistema.
+literal, e as mutações de barreira reprovando — entre elas as duas próprias
+desta etapa:
+
+| Mutação | Deve reprovar |
+| --- | --- |
+| origem que **exige** empresa recebendo `client_company_id` nulo | ✔ |
+| origem que **não exige** recebendo empresa preenchida | ✔ |
+| empresa demandante sem `is_client_company` | ✔ |
+
+A segunda é a que a bicondicional existe para pegar, e a que uma implicação
+simples deixaria passar (D-042, decisão 3).
+
+**Não** existe asserção de "comércio sem vínculo é válido" — D-042 corrigiu essa
+premissa. Todo comércio tem origem; o que varia é o tipo de alvo, e o que a
+estrutura permite é **vínculo sem empresa**, não comércio sem vínculo.
 
 ---
 
@@ -439,8 +455,13 @@ todas as empresas que o usam (D-041). O que o vínculo responde é outra coisa, 
 a objeção real: quantos credenciamentos nasceram de demanda e quantos de
 ampliação de rede.
 
-*Aceite:* os cinco estados; importação com prévia obrigatória; um comércio
-cadastrado sem demandante; alvo de toque de 44 px.
+*Aceite:* os cinco estados; importação com prévia obrigatória; cadastro com cada
+uma das três origens, incluindo uma de melhoria de rede sem empresa; alvo de
+toque de 44 px.
+
+E o indicador de exceção: **contador de comércios sem origem no topo da página,
+visível por padrão — nunca filtro que alguém precisa lembrar de aplicar**
+(D-042, decisão 6). Exceção que só aparece quando procurada não é monitorada.
 
 ---
 
