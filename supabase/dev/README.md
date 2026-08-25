@@ -72,11 +72,37 @@ com o texto intacto, passa com tudo OK.
 `*_comportamento.sql` fecha essa lacuna: **escreve, mede e limpa**. Roda depois
 da verificação da mesma migration, nunca no lugar dela (D-043).
 
-| Script | Cobre | Casos |
-| --- | --- | --- |
-| `0010_comportamento.sql` | barreiras de inativação, reativação e motivo | 7 |
-| `0013_comportamento.sql` | as seis funções de trilha | 6 |
-| `0014_comportamento.sql` | forma da demanda por origem | 6 |
+| Script | Cobre | Casos | Painel? |
+| --- | --- | --- | --- |
+| `supabase/dev/comportamento/0010_status.sql` | barreiras de inativação, reativação e motivo | 7 | **não** |
+| `supabase/dev/comportamento/0013_trilha.sql` | as seis funções de trilha | 6 | **não** |
+| `supabase/checks/0014_comportamento.sql` | forma da demanda por origem | 6 | sim |
+
+### Os dois primeiros não saem daqui
+
+Medir a família de status **produz** linhas em `crm_record_status_history`, e
+limpá-las exige apagar de lá. Que o dono do banco sempre pôde fazer isso não é o
+argumento: a regra de D-023 existe para produzir um hábito, e um script pronto
+que apaga trilha acaba sendo rodado no painel um dia — por alguém depurando
+outra coisa, que o executa porque é assim que se verifica trilha neste projeto.
+
+Três mecanismos, do mais fraco ao mais forte:
+
+| Onde | O quê |
+| --- | --- |
+| localização | `supabase/dev/comportamento/`, fora de `checks/` |
+| cabeçalho | o motivo escrito no arquivo |
+| recusa | exigem `crm.cluster_local = 'sim'`, que só este script define |
+
+A localização é o que carrega o peso — aviso em cabeçalho só é lido por quem já
+está prestando atenção.
+
+A recusa fica **dentro** do bloco que trabalha, como primeira instrução. Medido:
+num `do $$` separado antes dele, o `psql` sem `ON_ERROR_STOP` imprime o erro e
+segue — o script recusava e escrevia na trilha assim mesmo (D-043).
+
+`0014_comportamento.sql` continua em `checks/` e continua indo para o painel:
+não altera status de nada, então não gera nem apaga trilha.
 
 ### `01_harness_perfis.sql`
 

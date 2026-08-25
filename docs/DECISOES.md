@@ -1454,7 +1454,7 @@ significaria descartar exatamente as linhas que precisam de atenção.
 
 ---
 
-## D-043 — Comportamento é nível de prova próprio, com script separado
+## D-043 — Comportamento é nível de prova próprio, e o que toca trilha não sai do cluster local
 
 **Contexto.** A `0014` foi provada por mutação: trocando a bicondicional do
 `enforce_demand_origin_shape()` por uma implicação simples, `0014_verificacao.sql`
@@ -1475,11 +1475,10 @@ medido nesta sprint sobre a `stamp_status_transition`, já aplicada:
 
 A busca textual pega a remoção descuidada. Não pega a regra desligada.
 
-**Decisão.**
+**Decisão, parte 1 — a forma.**
 
 1. Regra que vive num corpo de função exige script de comportamento próprio,
-   em `supabase/checks/<prefixo>_comportamento.sql`, que **escreve, mede e
-   limpa**.
+   que **escreve, mede e limpa**.
 2. Ele é **separado** do `*_verificacao.sql`, que permanece somente leitura.
    Misturar os dois tiraria da verificação a propriedade de poder ser colada em
    qualquer banco sem consequência.
@@ -1493,22 +1492,55 @@ A busca textual pega a remoção descuidada. Não pega a regra desligada.
 5. `reconstruir.sh --checks` roda o comportamento **depois** da verificação da
    mesma migration, nunca no lugar dela.
 
-**Consequência aceita: o script apaga linhas de trilha.** Não existe transição
-de status sem linha de trilha — é o que a 0008 garante. Medir a família produz
-histórico de entidades que não existem, e a escolha é entre lixo permanente nos
-relatórios ou remoção.
+**Decisão, parte 2 — script que toca trilha não sai do cluster local.**
 
-A remoção é cirúrgica — só os UUIDs fixos do próprio script, que nunca
-correspondem a registro real — e só é possível porque o SQL Editor roda como
-dono da tabela. **D-023 continua íntegro:** a imutabilidade é sobre a
-aplicação — não há policy de INSERT, UPDATE nem DELETE, e nenhum caminho do
-frontend alcança o dono. O que muda é que isso passa a estar escrito, em vez de
-ser descoberto por quem rodar o script.
+Medir a família de status **produz** linhas em `crm_record_status_history`, e
+limpá-las exige apagar de lá. Que o dono do banco sempre pôde fazer isso, e que
+a remoção seja cirúrgica, é tecnicamente correto — e não é o argumento que
+decide.
 
-**Alternativas descartadas.** Deixar as linhas de teste no histórico: contamina
-relatório para sempre, e o `[teste]` some junto com a entidade apagada, restando
-um `target_id` órfão. Não testar comportamento em banco real: devolve o problema
-inteiro.
+**A regra de D-023 existe para produzir um hábito, e o hábito é o que protege
+quando ninguém está prestando atenção.** No momento em que existir no
+repositório um script que apaga trilha e que foi feito para rodar no painel, ele
+vai ser rodado no painel. Não por quem o escreveu, que sabe exatamente o que ele
+faz — por alguém daqui a um ano, depurando outra coisa, que encontra o arquivo e
+o executa porque é assim que se verifica trilha neste projeto. Aí a remoção
+deixa de ser cirúrgica.
+
+A trilha é o único artefato do sistema irrecuperável por natureza. Foi o
+argumento para antecipar essas funções na fila (D-044); vale igualmente aqui.
+
+Três mecanismos, do mais fraco ao mais forte:
+
+| Onde | O quê |
+| --- | --- |
+| **localização** | `supabase/dev/comportamento/`, não `supabase/checks/` — este último é o diretório do que se cola no painel |
+| **cabeçalho** | o motivo escrito no arquivo, não só nesta decisão |
+| **recusa** | o script exige `crm.cluster_local = 'sim'`, que só `reconstruir.sh` define no banco que ele mesmo cria |
+
+A localização é o mecanismo que carrega o peso. Aviso em cabeçalho só é lido por
+quem já está prestando atenção — que é justamente quem não precisava do aviso.
+
+**A recusa fica DENTRO do bloco que trabalha, como primeira instrução.** Medido:
+com a barreira num `do $$` separado antes dele, o `psql` sem `ON_ERROR_STOP`
+imprime o erro e **segue** para o bloco seguinte — o script recusou e escreveu na
+trilha assim mesmo. Barreira que depende do cliente abortar não é barreira. E a
+leitura ingênua do resultado enganou: o banco ficou com zero linhas de trilha,
+que parecia prova de recusa e era o `delete` de limpeza tendo rodado.
+
+`0014_comportamento.sql` **continua em `supabase/checks/`** e continua indo para
+o painel: ele não altera status de nada e portanto não gera nem apaga trilha. O
+recorte é preciso — *toca `crm_record_status_history`* —, não uma categoria
+inteira posta de quarentena por precaução.
+
+**Se um dia for necessário verificar comportamento de trilha contra o banco
+real**, isso vira decisão própria, tomada na hora, com o risco na mesa — não
+herdada de um arquivo que já estava lá.
+
+**Alternativas descartadas.** Deixar as linhas de teste no histórico do banco
+real: contamina relatório para sempre, e o `[teste]` some junto com a entidade
+apagada, restando um `target_id` órfão. Manter os scripts em `checks/` com aviso
+no cabeçalho: é a formulação que esta decisão corrige.
 
 ---
 

@@ -7,16 +7,38 @@
 -- As três são BEFORE UPDATE sobre a MESMA transição da MESMA linha, e nenhuma
 -- tinha verificação que alcançasse o corpo.
 --
+-- ===========================================================================
+-- EXCLUSIVO DO CLUSTER LOCAL. NÃO VAI PARA O PAINEL.
+--
+-- Mora em `supabase/dev/`, e não em `supabase/checks/`, porque `checks/` é o
+-- diretório do que se cola no SQL Editor. A distinção precisa estar na
+-- localização, não num aviso no cabeçalho: aviso é lido por quem já está
+-- prestando atenção.
+--
+-- O motivo: medir esta família PRODUZ linhas de trilha, e limpá-las exige
+-- apagar de `crm_record_status_history`. Que o dono do banco sempre pôde fazer
+-- isso, e que a remoção aqui seja cirúrgica, é verdade e não é o ponto. A regra
+-- de D-023 existe para produzir um hábito, e o hábito é o que protege quando
+-- ninguém está prestando atenção.
+--
+-- No momento em que existir no repositório um script que apaga trilha e que foi
+-- feito para rodar no painel, ele vai ser rodado no painel — não por quem o
+-- escreveu, que sabe o que ele faz, mas por alguém daqui a um ano, depurando
+-- outra coisa, que o executa porque é assim que se verifica trilha neste
+-- projeto. Aí a remoção deixa de ser cirúrgica.
+--
+-- A trilha é o único artefato do sistema irrecuperável por natureza. Foi o
+-- argumento para antecipar estas funções na fila; vale igualmente aqui (D-043).
+--
+-- Único caminho de execução: `supabase/dev/reconstruir.sh --checks`.
+-- ===========================================================================
+--
 -- Fica de fora `enforce_inactivation_is_manager_or_admin()` (0003): existe, mas
 -- nenhuma tabela a aplica ainda — as três que a usam nascem nas Sprints 3 e 4.
 -- Não há como medir comportamento de trigger que não está pendurada em nada.
 -- Quando a primeira delas nascer, o caso entra aqui.
 --
--- ATENÇÃO: este script ESCREVE. É diferente dos `*_verificacao.sql`, que são
--- somente leitura. Cria um time de teste com UUID fixo, mede sete transições e
--- apaga o que criou — inclusive as linhas de trilha que as próprias transições
--- geraram (ver "sobre a trilha", ao final). Reexecutável.
---
+
 -- ===========================================================================
 -- POR QUE ELE EXISTE
 --
@@ -59,6 +81,21 @@
 -- suposição, não o banco.
 -- ===========================================================================
 
+-- ---------------------------------------------------------------------------
+-- BARREIRA DE EXECUÇÃO — não é comentário, é recusa
+--
+-- `crm.cluster_local` só existe porque `reconstruir.sh` a define no banco que
+-- ele mesmo cria. Não há como reproduzi-la colando no SQL Editor sem decidir
+-- fazê-lo de propósito — que é exatamente o ponto: se um dia for necessário
+-- medir comportamento de trilha contra o banco real, isso vira decisão tomada
+-- na hora, com o risco na mesa, e não herdada de um arquivo que já estava lá.
+--
+-- A checagem fica DENTRO do bloco que trabalha, como primeira instrução, e não
+-- num `do $$` separado antes dele. Medido: com a barreira num bloco à parte, o
+-- `psql` sem ON_ERROR_STOP imprime o erro e SEGUE para o bloco seguinte — o
+-- script recusou e escreveu na trilha assim mesmo. Barreira que depende do
+-- cliente abortar não é barreira.
+-- ---------------------------------------------------------------------------
 do $$
 declare
   id_time  constant uuid := 'aa000000-0000-4000-8000-000000000001';
@@ -67,6 +104,14 @@ declare
   estado   text;
   recado   text;
 begin
+  -- Barreira: ver o bloco de comentário acima. Primeira instrução, antes de
+  -- qualquer escrita.
+  if coalesce(current_setting('crm.cluster_local', true), 'nao') <> 'sim' then
+    raise exception
+      'Script exclusivo do cluster local (D-043). Ele escreve e apaga linhas de crm_record_status_history, e a trilha é o único artefato irrecuperável do sistema. Rode por supabase/dev/reconstruir.sh --checks.'
+      using errcode = '42501';
+  end if;
+
   create temp table if not exists resultado_status (
     ordem int, contexto text, caso text, esperado text, obtido text, status text
   );
@@ -216,21 +261,18 @@ select ordem, contexto, caso, esperado, obtido, status
   from resultado_status order by ordem;
 
 -- ===========================================================================
--- SOBRE A TRILHA
+-- POR QUE ESTE SCRIPT APAGA TRILHA — e por que isso o prende ao cluster local
 --
 -- Não existe transição de status sem linha de trilha: é o que a 0008 garante.
--- Logo, medir esta família PRODUZ histórico de entidades que não existem, e a
--- escolha é entre deixar lixo permanente nos relatórios ou removê-lo.
+-- Logo, medir esta família PRODUZ histórico de entidades que não existem, e não
+-- há terceira opção — ou o lixo fica, ou o script apaga.
 --
--- A remoção acima é cirúrgica — `scope = 'team'` e o UUID fixo deste script,
--- que nunca corresponde a um time real — e só é possível porque o SQL Editor
--- roda como dono da tabela. A imutabilidade de D-023 é sobre a APLICAÇÃO: não
--- há policy de INSERT, UPDATE nem DELETE, e nenhum caminho do frontend alcança
--- o dono. Isso permanece verdadeiro.
+-- Como o cluster local é recriado do zero a cada `reconstruir.sh`, aqui a
+-- limpeza é cortesia, não necessidade: nada sobrevive à próxima reconstrução.
+-- É contra o banco real que ela seria necessária — e é exatamente por isso que
+-- este script não vai para lá.
 --
--- Confira que não sobrou nada:
---   select * from public.crm_record_status_history
---    where target_id = 'aa000000-0000-4000-8000-000000000001';
---   select * from public.teams where name like '[teste]%';
--- Ambas devem vir vazias.
+-- D-023 permanece íntegro em produção justamente porque nenhum script deste
+-- tipo mora em `supabase/checks/`. A imutabilidade é sobre a aplicação, e o
+-- repositório não oferece a ninguém um atalho pronto para contorná-la (D-043).
 -- ===========================================================================

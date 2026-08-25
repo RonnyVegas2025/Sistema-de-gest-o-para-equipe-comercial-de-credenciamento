@@ -592,8 +592,11 @@ escritas por cópia. Por isso **um script com seis casos**, e não seis scripts.
 
 | Arquivo | Cobre | Casos |
 | --- | --- | --- |
-| `supabase/checks/0010_comportamento.sql` | `enforce_inactivation_is_admin` (0003) · `enforce_reactivation_is_admin` (0008) · `stamp_status_transition` (0010) | 7 |
-| `supabase/checks/0013_comportamento.sql` | as seis funções de trilha (0008/0010, 0012, 0013) | 6 |
+| `supabase/dev/comportamento/0010_status.sql` | `enforce_inactivation_is_admin` (0003) · `enforce_reactivation_is_admin` (0008) · `stamp_status_transition` (0010) | 7 |
+| `supabase/dev/comportamento/0013_trilha.sql` | as seis funções de trilha (0008/0010, 0012, 0013) | 6 |
+
+**Os dois são exclusivos do cluster local e não vão para o painel** — ver
+"O que apagar trilha custou", adiante.
 
 `enforce_inactivation_is_admin` entrou junto porque o próprio script a
 encontrou: a primeira versão supunha que inativar não era privilégio de
@@ -629,15 +632,52 @@ que é a regra de CLAUDE.md aplicada a SQL.
 | `write_record_status_team()` esvaziada | **passa** | caso 3 — "não gravou" |
 | `write_record_status_seller()` com o `scope` do vizinho | **passa** | caso 4 |
 | `write_record_status_company()` sem o motivo | **passa** | caso 5 — motivo nulo |
+| barreira do cluster local num bloco `do $$` à parte | — | o script rodou inteiro |
 
-Seis das sete mutações são invisíveis à verificação estrutural. A terceira linha
+Seis das sete primeiras são invisíveis à verificação estrutural. A última mediu
+a própria barreira desta etapa, e reprovou. A terceira linha
 contra a quarta é a demonstração inteira: apagar a regra deixa rastro no texto;
 envolvê-la em `if false then` não deixa nenhum.
 
+### O que apagar trilha custou
+
+Medir esta família **produz** linhas em `crm_record_status_history`, e limpá-las
+exige apagar de lá. Tecnicamente D-023 segue íntegro — a imutabilidade é contra
+a aplicação, o dono do banco sempre pôde apagar, e a remoção é cirúrgica. Não é
+o argumento que decide.
+
+> A regra existe para produzir um hábito, e o hábito é o que protege quando
+> ninguém está prestando atenção. No momento em que existir no repositório um
+> script que apaga linhas de trilha e que foi feito para rodar no painel, ele
+> vai ser rodado no painel. Não por quem o escreveu, que sabe exatamente o que
+> ele faz — por alguém daqui a um ano, depurando outra coisa, que encontra o
+> arquivo e o executa porque é assim que se verifica trilha neste projeto. E aí
+> a remoção deixa de ser cirúrgica.
+
+Os dois scripts saíram de `supabase/checks/` para `supabase/dev/comportamento/`,
+com o motivo no cabeçalho e uma recusa em tempo de execução: exigem
+`crm.cluster_local = 'sim'`, que só `reconstruir.sh` define. A localização é o
+mecanismo que carrega o peso — aviso em cabeçalho só é lido por quem já está
+prestando atenção.
+
+**A recusa fica dentro do bloco que trabalha, como primeira instrução.** A
+primeira tentativa a pôs num `do $$` separado antes dele, e não funcionou: o
+`psql` sem `ON_ERROR_STOP` imprime o erro e segue para o bloco seguinte — o
+script recusava e escrevia na trilha assim mesmo. Pior, a leitura ingênua do
+resultado enganou: o banco ficou com zero linhas de trilha, que parecia prova de
+recusa e era o `delete` de limpeza tendo rodado.
+
+`0014_comportamento.sql` continua em `checks/` e continua indo para o painel:
+não altera status de nada, então não gera nem apaga trilha. O recorte é
+*toca `crm_record_status_history`*, não uma categoria inteira em quarentena.
+
+Registrado em D-043, corrigindo a formulação inicial.
+
 ### Infraestrutura
 
-- `reconstruir.sh --checks` passa a rodar `*_comportamento.sql` intercalado,
-  depois da verificação da mesma migration — nunca no lugar dela.
+- `reconstruir.sh --checks` passa a rodar os scripts de comportamento
+  intercalados, depois da verificação da mesma migration — nunca no lugar dela.
+  Varre os dois diretórios, e a diferença entre eles está escrita ali.
 - `supabase/dev/01_harness_perfis.sql`: um administrador e um não-administrador
   para o cluster local, **nunca aplicado no projeto hospedado**, onde os perfis
   vêm do seed. Aplicado *lazy*, imediatamente antes do primeiro script de

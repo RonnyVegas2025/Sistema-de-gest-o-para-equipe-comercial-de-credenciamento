@@ -89,7 +89,15 @@ titulo "banco $BANCO"
 psql -d postgres -q -c "drop database if exists $BANCO with (force)" 2>/dev/null \
   || psql -d postgres -q -c "drop database if exists $BANCO"
 psql -d postgres -q -c "create database $BANCO"
-echo "recriado"
+
+# Marca que ESTE banco é o cluster local. Os scripts de comportamento que
+# escrevem em crm_record_status_history recusam rodar sem ela (D-043): a trilha
+# é o único artefato irrecuperável do sistema, e um script pronto que a apaga
+# acabaria sendo colado no painel um dia, por alguém depurando outra coisa.
+# Reproduzi-la no projeto hospedado é possível — e passa a ser decisão tomada na
+# hora, com o risco na mesa, em vez de herdada de um arquivo que já estava lá.
+psql -d postgres -q -c "alter database $BANCO set crm.cluster_local = 'sim'"
+echo "recriado (crm.cluster_local = sim)"
 
 titulo "harness (o que o Supabase provê)"
 psql -d "$BANCO" -q -v ON_ERROR_STOP=1 -f "$RAIZ/supabase/dev/00_harness_auth.sql"
@@ -151,8 +159,18 @@ for arquivo in "$RAIZ"/supabase/migrations/*.sql; do
     # Estes scripts ESCREVEM, medem e limpam — por isso são arquivos separados,
     # e por isso rodam depois da verificação, nunca no lugar dela.
     # ──────────────────────────────────────────────────────────────────────
-    comportamento="$RAIZ/supabase/checks/${prefixo}_comportamento.sql"
-    if [ -f "$comportamento" ]; then
+    #
+    # DOIS DIRETÓRIOS, E A DIFERENÇA IMPORTA
+    #
+    #   supabase/checks/<pref>_comportamento.sql   pode ser colado no painel
+    #   supabase/dev/comportamento/<pref>_*.sql    NUNCA — só daqui
+    #
+    # O segundo grupo escreve em crm_record_status_history. A localização é a
+    # separação: `checks/` é o diretório do que se cola no SQL Editor, e aviso
+    # em cabeçalho só é lido por quem já está prestando atenção (D-043).
+    for comportamento in "$RAIZ/supabase/checks/${prefixo}_comportamento.sql" \
+                         "$RAIZ"/supabase/dev/comportamento/"${prefixo}"_*.sql; do
+      [ -f "$comportamento" ] || continue
       # Fixture lazy: perfis de teste só quando o primeiro comportamento pedir.
       # Aplicá-la junto do harness mudaria a contagem de 0002_verificacao.sql.
       if [ "$PERFIS_APLICADOS" -eq 0 ]; then
@@ -162,14 +180,14 @@ for arquivo in "$RAIZ"/supabase/migrations/*.sql; do
       saida="$(psql -d "$BANCO" -q -At -F '|' -f "$comportamento" 2>&1)"
       ruins="$(printf '%s\n' "$saida" | grep -vc '|OK$' || true)"
       if [ "$ruins" -ne 0 ]; then
-        echo "      FALHA no comportamento — $ruins linha(s) fora de OK"
+        echo "      FALHA em $(basename "$comportamento") — $ruins linha(s) fora de OK"
         printf '%s\n' "$saida" | grep -v '|OK$' | head -8
         falhas=$((falhas + 1))
       else
         linhas="$(printf '%s\n' "$saida" | grep -c '|OK$' || true)"
-        echo "      comportamento ok — $linhas caso(s)"
+        echo "      comportamento ok — $linhas caso(s)  [$(basename "$comportamento")]"
       fi
-    fi
+    done
   fi
 
   if [ -n "$ATE" ] && [[ "$nome" == "$ATE"* ]]; then

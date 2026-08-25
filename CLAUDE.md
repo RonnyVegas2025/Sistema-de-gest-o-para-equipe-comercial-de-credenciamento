@@ -102,6 +102,13 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
   todas as linhas OK e a linha proibida entrou. Regra que vive num corpo de
   função exige script de comportamento próprio, que **escreve, mede e limpa** —
   separado do `*_verificacao.sql`, que é somente leitura (D-043).
+- **Script de comportamento que toca `crm_record_status_history` não sai do
+  cluster local.** Mora em `supabase/dev/comportamento/`, nunca em
+  `supabase/checks/` — que é o diretório do que se cola no painel. A regra de
+  D-023 existe para produzir um hábito, e um script pronto que apaga trilha
+  acaba sendo rodado no painel um dia, por quem está depurando outra coisa.
+  Verificar trilha contra o banco real é decisão tomada na hora, com o risco na
+  mesa, nunca herdada de um arquivo que já estava lá (D-043).
 - **Casar texto no corpo pega a remoção, não o desligamento.** Um corpo que
   mantenha todos os trechos procurados dentro de um `if false then` passa na
   busca textual e não faz nada. Medido sobre a `stamp_status_transition` já
