@@ -95,6 +95,13 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
 
 **Segurança**
 
+- **Verificação estrutural não alcança comportamento.** Um script que lê o
+  catálogo do Postgres confere que o trigger existe, que é `BEFORE`, que não é
+  `security definer` — e é **cego para o corpo da função**. Medido na `0014`:
+  trocando a bicondicional por uma implicação simples, a verificação seguiu com
+  todas as linhas OK e a linha proibida entrou. Regra que vive num corpo de
+  função exige script de comportamento próprio, que **escreve, mede e limpa** —
+  separado do `*_verificacao.sql`, que é somente leitura.
 - **Teste que protege fronteira de segurança é validado por mutação.** Escrever
   o teste, quebrar o código de propósito, confirmar que reprova, restaurar.
   Sem isso o teste é uma afirmação, não uma garantia — e teste de segurança que
