@@ -152,6 +152,15 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
 - Trigger de trilha declara `when (old.x is distinct from new.x)` — `UPDATE` que
   não muda valor não gera linha. Nunca `<>`, que devolve nulo com nulo de um dos
   lados.
+- **Regra de comportamento vem de dado do catálogo, nunca de literal no
+  código.** Quando uma linha de catálogo muda o que o sistema exige,
+  o mecanismo é **flag booleana na própria linha + trigger lendo a flag** — não
+  `if valor = 'outro'`. Comparar com literal quebra de dois jeitos: quando
+  alguém renomeia a linha, e quando surge uma **segunda** linha com o mesmo
+  comportamento. Já apareceu duas vezes: `requires_notes` em `crm_loss_reasons`
+  (D-011) e `requires_client_company` em `crm_demand_origins` (D-042). Mesma
+  forma, mesmo motivo — e sem isto nomeado, a terceira ocorrência é resolvida
+  de outro jeito por quem não viu as duas primeiras.
 - Toda função de trilha: `security definer` + `set search_path = public` +
   `revoke execute from public, authenticated`. **Uma por entidade** — gravador
   genérico de histórico anula a imutabilidade.
