@@ -115,6 +115,12 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
   revela: se remover a barreira alvo e o teste continuar verde, ele nunca a
   testou. Caso real: fixtures com `id: 'a1'` reprovavam por uuid inválido, e a
   recusa de auto-desativação nunca era alcançada (Sprint 2, etapa 1b).
+- **Recorte se verifica em TODAS as policies de escrita, não só na de leitura.**
+  Uma tabela com `SELECT` recortado e `UPDATE` aberto deixa o consultor
+  reatribuir para si um registro fora do escopo — e o `SELECT` recortado
+  **esconde a operação depois de feita**. Leitura correta com escrita aberta é o
+  modo de falhar mais difícil de perceber: nada na tela denuncia, porque a tela
+  obedece à policy certa. Conferir só a de leitura passa por cima dele.
 - A RLS é a fronteira real. Menu e guarda de rota são conveniência.
 - Nunca relaxar RLS para fazer uma tela funcionar.
 - Service role apenas em Edge Function. Nunca no frontend, nunca com prefixo
