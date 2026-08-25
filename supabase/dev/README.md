@@ -6,6 +6,7 @@ para o SQL Editor do painel.
 ```bash
 supabase/dev/reconstruir.sh              # reconstrói do zero e aplica tudo
 supabase/dev/reconstruir.sh --checks     # idem, verificando cada etapa
+                                         # (verificação + comportamento)
 supabase/dev/reconstruir.sh --ate 0009   # para depois da 0009
 ```
 
@@ -60,4 +61,33 @@ própria migration e falsas depois que a seguinte roda.
 Por isso `--checks` roda cada verificação **intercalada**, logo após a sua
 migration — que é como são usadas de verdade: aplicar, verificar, seguir.
 
-Estado esperado hoje: **11 migrations, 255 checagens, todas OK.**
+## Comportamento é um segundo nível, com script separado
+
+`*_verificacao.sql` lê o catálogo do Postgres e é **cego para o corpo da
+função**. Quatro scripts casam texto no corpo, o que pega a remoção descuidada —
+não pega a regra desligada. Medido sobre a `stamp_status_transition` já
+aplicada: apagar a checagem de motivo reprova; envolvê-la em `if false then`,
+com o texto intacto, passa com tudo OK.
+
+`*_comportamento.sql` fecha essa lacuna: **escreve, mede e limpa**. Roda depois
+da verificação da mesma migration, nunca no lugar dela (D-043).
+
+| Script | Cobre | Casos |
+| --- | --- | --- |
+| `0010_comportamento.sql` | barreiras de inativação, reativação e motivo | 7 |
+| `0013_comportamento.sql` | as seis funções de trilha | 6 |
+| `0014_comportamento.sql` | forma da demanda por origem | 6 |
+
+### `01_harness_perfis.sql`
+
+Um administrador e um não-administrador, para que os casos possam simular o JWT
+de cada um. **Nunca é aplicado no projeto hospedado** — lá os perfis vêm do seed
+da estrutura comercial.
+
+Aplicado *lazy*, imediatamente antes do primeiro script de comportamento.
+Inseri-los junto do harness mudaria a contagem que `0002_verificacao.sql` faz
+sobre a tabela — e fixture que altera resultado de verificação de schema deixa
+de ser fixture.
+
+Estado esperado hoje: **14 migrations, 410 checagens estruturais e 19 casos de
+comportamento, todos OK.**

@@ -562,6 +562,94 @@ os demais devolvem números idênticos.
 
 ---
 
+## 8b · Comportamento das triggers já aplicadas
+
+A 0014 revelou uma lacuna que não é dela: **`*_verificacao.sql` lê o catálogo do
+Postgres e é cego para o corpo da função.** Quatro scripts casam texto no corpo,
+o que ajuda — mas um corpo que mantenha todos os trechos procurados dentro de um
+`if false then` passa na busca e não faz nada. Isso foi medido, não suposto.
+
+O levantamento encontrou 14 funções de trigger com regra no corpo. Esta etapa
+**não fecha todas** — antecipa as que não admitem correção posterior, e deixa o
+restante para a Sprint 3 com a forma já estabelecida.
+
+### Por que estas duas primeiro
+
+`enforce_reactivation_is_admin` guarda D-025, e sua queda é silenciosa: um
+registro reativado por quem não podia é idêntico a um reativado por quem podia.
+
+As seis funções de trilha são o caso irrecuperável:
+
+> Se a trilha não gravar, não há nada para descobrir depois. A informação não
+> existe, e a ausência é indistinguível do caso normal. Todo outro defeito desta
+> família deixa rastro — a linha errada está lá, e alguém pode encontrá-la. Este
+> apaga a própria evidência de si mesmo.
+
+E é barato de introduzir por acidente: as seis têm a mesma forma e foram
+escritas por cópia. Por isso **um script com seis casos**, e não seis scripts.
+
+### O que entrou
+
+| Arquivo | Cobre | Casos |
+| --- | --- | --- |
+| `supabase/checks/0010_comportamento.sql` | `enforce_inactivation_is_admin` (0003) · `enforce_reactivation_is_admin` (0008) · `stamp_status_transition` (0010) | 7 |
+| `supabase/checks/0013_comportamento.sql` | as seis funções de trilha (0008/0010, 0012, 0013) | 6 |
+
+`enforce_inactivation_is_admin` entrou junto porque o próprio script a
+encontrou: a primeira versão supunha que inativar não era privilégio de
+administrador, reprovou, e o errado era a suposição. As três vivem na mesma
+transição da mesma linha e não se medem separadas.
+
+Fica de fora `enforce_inactivation_is_manager_or_admin` (0003): existe, mas
+nenhuma tabela a aplica ainda. Não há como medir trigger que não está pendurada
+em nada — o caso entra quando a primeira das três tabelas nascer.
+
+### Duas exigências de forma que estes scripts estabelecem
+
+**O contexto é declarado, nunca herdado.** As três barreiras são escritas
+`auth.uid() is not null and ...`. No SQL Editor não há JWT: `auth.uid()` é nulo
+e nenhuma delas dispara. Um script que apenas tentasse inativar veria tudo
+passar — teria medido o console, não a regra. Cada caso define
+`request.jwt.claim.sub`, e um caso final mede o console de propósito, para que a
+porta fique escrita em vez de descoberta por acidente.
+
+**A recusa é identificada pela mensagem, não pelo errcode.** Duas barreiras
+diferentes recusam com o mesmo 42501, e as duas checagens de motivo com o mesmo
+23514. Comparar só o código deixaria um caso passar pela barreira do vizinho —
+que é a regra de CLAUDE.md aplicada a SQL.
+
+### O que as mutações mediram
+
+| Mutação | Estrutura | Comportamento |
+| --- | --- | --- |
+| `enforce_reactivation_is_admin` esvaziada com `if false then` | **passa** | caso 4 |
+| `enforce_inactivation_is_admin` esvaziada com `if false then` | **passa** | casos 1 e 2 |
+| checagem de motivo da reativação REMOVIDA | reprova | caso 5 |
+| a mesma checagem envolta em `if false then` | **passa** | caso 5 |
+| `write_record_status_team()` esvaziada | **passa** | caso 3 — "não gravou" |
+| `write_record_status_seller()` com o `scope` do vizinho | **passa** | caso 4 |
+| `write_record_status_company()` sem o motivo | **passa** | caso 5 — motivo nulo |
+
+Seis das sete mutações são invisíveis à verificação estrutural. A terceira linha
+contra a quarta é a demonstração inteira: apagar a regra deixa rastro no texto;
+envolvê-la em `if false then` não deixa nenhum.
+
+### Infraestrutura
+
+- `reconstruir.sh --checks` passa a rodar `*_comportamento.sql` intercalado,
+  depois da verificação da mesma migration — nunca no lugar dela.
+- `supabase/dev/01_harness_perfis.sql`: um administrador e um não-administrador
+  para o cluster local, **nunca aplicado no projeto hospedado**, onde os perfis
+  vêm do seed. Aplicado *lazy*, imediatamente antes do primeiro script de
+  comportamento: inseri-los junto do harness mudaria a contagem de
+  `0002_verificacao.sql`, e fixture que altera resultado de verificação de
+  schema deixa de ser fixture.
+
+*Aceite:* 7 casos `OK` na 0010, 6 na 0013, com o cluster reconstruído do zero; e
+a tabela de mutações acima reproduzida.
+
+---
+
 ## 9 · Verificação final e documentação
 
 - `npm run verify` limpo;

@@ -101,7 +101,22 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
   trocando a bicondicional por uma implicação simples, a verificação seguiu com
   todas as linhas OK e a linha proibida entrou. Regra que vive num corpo de
   função exige script de comportamento próprio, que **escreve, mede e limpa** —
-  separado do `*_verificacao.sql`, que é somente leitura.
+  separado do `*_verificacao.sql`, que é somente leitura (D-043).
+- **Casar texto no corpo pega a remoção, não o desligamento.** Um corpo que
+  mantenha todos os trechos procurados dentro de um `if false then` passa na
+  busca textual e não faz nada. Medido sobre a `stamp_status_transition` já
+  aplicada: apagar a checagem de motivo reprova; envolvê-la em `if false`
+  passa com tudo OK. Busca textual é degrau, nunca o topo.
+- **Em script de comportamento, o contexto é declarado, nunca herdado.** As
+  barreiras são escritas `auth.uid() is not null and ...`: no SQL Editor não há
+  JWT, nenhuma dispara, e um script que só tentasse a operação mediria o
+  console em vez da regra — passando por vacuidade. Cada caso define
+  `request.jwt.claim.sub`, e um caso final mede o console de propósito.
+- **Trilha que não grava é o único defeito que apaga a evidência de si mesmo.**
+  Os demais deixam a linha errada no banco, onde alguém pode encontrá-la. Este
+  não: a informação não existe, e a ausência é indistinguível de uma entidade
+  que nunca mudou de status. Cobertura de comportamento das funções de trilha
+  não espera pela sprint em que der (D-044).
 - **Teste que protege fronteira de segurança é validado por mutação.** Escrever
   o teste, quebrar o código de propósito, confirmar que reprova, restaurar.
   Sem isso o teste é uma afirmação, não uma garantia — e teste de segurança que
