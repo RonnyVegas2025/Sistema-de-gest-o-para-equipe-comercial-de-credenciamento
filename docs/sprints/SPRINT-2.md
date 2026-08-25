@@ -385,9 +385,25 @@ porque "não encontrado" e "fornecedor fora do ar" não podem virar a mesma tela
 - policies com recorte, incluindo o ramo de gestão para responsável nulo;
 - índices em `responsible_seller_id`, `team_id` e `relationship_type`.
 
-*Aceite:* `0013_verificacao.sql` todas as linhas `OK`, com a checagem literal do
-recorte. **Provado por mutação:** trocar o predicado da policy por `using (true)`
-faz o script reprovar; restaurado em seguida.
+*Aceite — CUMPRIDO em 25/08/2026, contra o banco real: 46 de 46 `OK`.*
+
+As três linhas que fecham D-018:
+
+```
+as três policies chamam scoped_seller_ids        3 = 3  OK
+o predicado incide sobre responsible_seller_id   3 = 3  OK
+ramo de gestão para responsável nulo             3 = 3  OK
+```
+
+Provado por mutação, cinco vezes — entre elas **só o `UPDATE` perdendo o
+recorte**, que é o modo de falhar que não deixa rastro: a leitura continua
+correta enquanto a escrita não é.
+
+**O que esta etapa provou, além de si mesma.** A regra de aceite desta sprint
+existia para evitar o DE-025 do sistema de origem, onde o recorte do comercial
+foi adiado na Sprint 2 e seguia aberto três sprints depois. Aqui a função entrou
+na Sprint 1 e o enforcement na Sprint 2 — uma sprint depois, com verificação que
+reprova se cair. A regra funcionou na primeira vez em que foi cobrada.
 
 ---
 
