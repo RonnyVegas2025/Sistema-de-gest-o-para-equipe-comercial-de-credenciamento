@@ -151,7 +151,31 @@ implementação em `case`, os casos de consultor, gestor, diretor e administrado
 ficam **idênticos**, e só o de vínculo duplo cai. É por isso que o gate tem cinco
 usuários.
 
-A função está pronta e provada. **O enforcement não existe ainda** — ver §9.
+### D-018 fechou em 25/08/2026
+
+**A função deixou de estar provada em isolamento e passou a proteger dados.** A
+migration `0013` levou o recorte a `crm_company_relationships`, aplicada no
+banco real com 46 checagens `OK` — três delas conferindo o recorte:
+
+```
+as três policies chamam scoped_seller_ids        3 = 3
+o predicado incide sobre responsible_seller_id   3 = 3
+ramo de gestão para responsável nulo             3 = 3
+```
+
+**O contraste com o sistema de origem é o ponto.** Lá, DE-025 adiou o recorte do
+comercial na Sprint 2, e ele seguia aberto **três sprints depois** — a intenção
+existia; o que faltou foi o momento em que a dívida se tornava visível.
+
+Aqui a função entrou na Sprint 1 e o *enforcement* na Sprint 2, uma sprint
+depois, **com verificação que reprova se cair**. Não foi disciplina: foi a regra
+de aceite da Sprint 2 — nenhuma tabela `crm_*` nasce sem a sua policy com
+recorte na mesma migration — fazendo exatamente o que ela existia para fazer.
+
+**E o recorte está nas três policies, não só na de leitura.** `SELECT` recortado
+com `UPDATE` aberto deixaria o consultor reatribuir para si um registro fora do
+escopo, e o `SELECT` esconderia a operação depois de feita. Provado por mutação:
+derrubar o recorte de qualquer uma das três reprova o script.
 
 ## 8. Frontend
 
@@ -172,7 +196,7 @@ são próprias, deduplicando por `source_ref` e nunca por nome.
 
 | Parece existir | Não existe |
 | --- | --- |
-| Policies com recorte de escopo | as cinco tabelas de §5.3 nascem na Sprint 2. A função existe; o enforcement não |
+| ~~Policies com recorte de escopo~~ | **existe desde 25/08/2026** — `crm_company_relationships` (`0013`), nas três policies. Ver §7. As demais tabelas de §5.3 nascem nas sprints seguintes |
 | Telas comerciais | nenhuma. Só login, recuperação, troca de senha e `/inicio` |
 | Tela de importação | Sprint 3 |
 | Dados de estrutura comercial | as quatro tabelas estão vazias — a carga depende de exportação do Painel |
