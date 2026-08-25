@@ -1203,6 +1203,125 @@ existir. Validação de DV, se entrar, é da aplicação ou do fornecedor de con
 
 ---
 
+## D-040 — Fronteira do dado financeiro, com gatilho explícito
+
+**Contexto.** O requisito de "Novos Comércios" (D-041) traz, na sua segunda
+fase, movimentação mensal, taxa administrativa e spread acumulado. Isso
+contradiz uma premissa registrada — `RLS_PERMISSOES.md` §2, sobre o papel
+`financeiro`:
+
+> *"Praticamente fora do CRM na V1 — **não há dado financeiro**; taxa negociada
+> é condição comercial, não faturamento."*
+
+A decisão é escrita **antes da primeira coluna**, e não quando a contradição já
+estiver no banco. Requisito financeiro que entra por partes — "só uma coluna de
+faturamento previsto" — nunca provoca a decisão, e a matriz de permissões fica
+defasada em silêncio.
+
+**Decisão. A fronteira é entre estimativa e realizado.**
+
+| Lado | O que é | Exemplos | Situação |
+| --- | --- | --- | --- |
+| **Estimativa comercial** | o que se espera ou se negocia | previsão de faturamento, taxa negociada, condições comerciais | **permitido na V1** — já é o que a §2 chamava de condição comercial |
+| **Faturamento** | o que aconteceu | movimentação realizada, spread acumulado, comissão efetivamente paga | **exige revisitar a §2 antes de entrar** |
+
+**O gatilho, explícito.** A primeira migration que criar coluna ou tabela do lado
+direito **não é aplicada** sem que, antes:
+
+1. `RLS_PERMISSOES.md` §2 seja reescrita — o papel `financeiro` deixa de ser
+   "praticamente fora do CRM" e ganha matriz própria;
+2. a matriz de §3 receba o módulo correspondente, com as três capacidades
+   declaradas para os seis papéis;
+3. `src/lib/permissions/can.ts` acompanhe, e o espelho TS × RLS seja conferido
+   pelos testes de §6.
+
+**Por que o gatilho é a migration e não a tela.** A tela é reversível; a coluna
+aplicada não (D-021 — correção é migration nova). E o papel `financeiro` existir
+sem leitura é diferente de existir com leitura errada.
+
+**Consequência imediata.** A fase 1 do requisito — cadastro, vínculo de demanda,
+previsão de faturamento — **passa limpa**: é toda do lado esquerdo. Nenhuma
+revisão de permissão é necessária agora.
+
+---
+
+## D-041 — Comércio credenciado e empresa demandante
+
+**Contexto.** A operação credencia comércios para atender demandas de empresas
+clientes. O vínculo comércio → empresa demandante só existia em e-mail, e sem
+ele não há como responder à objeção da diretoria: se o credenciamento está
+descolado da venda.
+
+**Decisão 1 — mesma tabela, classificação explícita.**
+
+Empresa cliente e comércio credenciado são ambos linhas em `companies`. São
+pessoas jurídicas com CNPJ, endereço e consulta de CNPJ idênticos, e o índice
+único parcial de CNPJ é **por tabela**: em duas tabelas, o mesmo CNPJ entraria
+nas duas sem nada impedir — e o caso não é hipotético, uma empresa cliente pode
+também ser credenciada como comércio.
+
+A classificação é **explícita**, em `is_merchant` e `is_client_company`,
+`not null default false`. **Nunca inferida.** A alternativa — deduzir "é empresa
+cliente" da ausência de linha em `crm_company_relationships` — é o mesmo erro que
+a regra de `prospect × base_vegas` proíbe.
+
+Migram para tabelas de papel dedicadas sem perda, quando "ser comércio" ganhar
+atributos próprios.
+
+**Decisão 2 — o vínculo de demanda é N:N, e não contradiz D-014.**
+
+A distinção é de **assunto**, não de cardinalidade:
+
+```
+crm_company_relationships   nosso relacionamento COM o estabelecimento
+                            prospect × base_vegas, consultor responsável
+                            1:1 por empresa (D-014)
+
+vínculo de demanda          qual empresa cliente DEMANDOU este credenciamento
+                            relação entre DUAS empresas · N:N
+```
+
+D-014 restringe quantas linhas de relacionamento uma empresa tem. O vínculo é
+outra tabela, com outro sujeito. **Seria** contradição pôr a empresa demandante
+como coluna em `crm_company_relationships`: aí um comércio com duas demandantes
+exigiria duas linhas de relacionamento.
+
+**Não usar `parent_company_id`.** É grupo econômico — matriz e filial, mesma
+titularidade. Usá-la aqui faria a filial virar "demandante" da matriz em
+qualquer consulta que percorresse a árvore.
+
+**Decisão 3 — o vínculo guarda apenas origem: quem demandou e quando.**
+
+Previsão de faturamento e comissão pertencem ao **comércio**, não ao vínculo,
+porque **a comissão é paga uma única vez por comércio**, mesmo com várias
+empresas demandando.
+
+**Decisão 4 — comércio pode existir sem demandante.**
+
+Acontece em ações de melhoria de rede: o consultor amplia a oferta antes de
+visitar empresas. Por isso o vínculo **não pode ser o registro de "é comércio"** —
+daí o marcador explícito da decisão 1.
+
+**Decisão 5 — o recorte do vínculo é pelo comércio.**
+
+É o objeto do trabalho comercial e é dele que sai a comissão. Recortar pela
+empresa demandante faria o consultor perder de vista o próprio credenciamento
+quando a demanda viesse de carteira alheia.
+
+### O que este vínculo responde — e o que NÃO responde
+
+**Não entra na conta econômica.** O spread é do comércio e agrega todas as
+empresas que o usam: um comércio credenciado por indicação da empresa X pode
+movimentar com A, B e C, e isso é normal e desejável. A conta é **comissão do
+comércio contra spread do comércio**; a empresa demandante não participa.
+
+O vínculo responde outra coisa, e é a pergunta que a diretoria fez de fato:
+**quantos credenciamentos nasceram de demanda real e quantos de ampliação de
+rede.** Comércio sem demandante não é caso de borda — é uma das duas categorias
+que a objeção "está descolado da venda" implicitamente separa.
+
+---
+
 # Decisões em aberto
 
 | # | Assunto | Quando decidir |

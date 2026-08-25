@@ -86,8 +86,24 @@ Se a bateria não passar, **não se avança para `companies`**. Detalhamento em
 
 ## Sprint 2 · Estabelecimentos, CNPJ e contatos
 
-Migrations `0012`–`0014`. *(Renumeradas: a Sprint 1 consumiu `0010` e `0011` com
-as correções da parada obrigatória de revisão — ver `MODELO_DADOS.md` §8.)*
+Migrations `0012`–`0015`. *(Renumeradas duas vezes: a Sprint 1 consumiu `0010` e
+`0011` com as correções da revisão, e o vínculo de demanda entrou como `0014`
+durante a sprint — ver `MODELO_DADOS.md` §8.)*
+
+### Requisito acrescentado durante a sprint — "Novos Comércios"
+
+Pedido da diretoria, avaliado pelo protocolo do `CLAUDE.md` e registrado em
+**D-041**. Vínculo comércio credenciado × empresa demandante, que só existia em
+e-mail, mais a página de cadastro e importação.
+
+**A página entrega o elo, não a comparação.** A pergunta — se o credenciamento
+se paga — exige comissão paga, movimentação, taxa e o vínculo; esta entrega dá a
+quarta. As outras três seguem em planilha, e a análise manual em paralelo é o
+que responde à diretoria no prazo.
+
+A fronteira do dado financeiro que o requisito levanta está em **D-040**, com
+gatilho explícito: a primeira migration de faturamento realizado não é aplicada
+sem revisitar o papel `financeiro` em `RLS_PERMISSOES.md` §2.
 
 Plano executável com critério de aceite por etapa: `docs/sprints/SPRINT-2.md`.
 
@@ -149,7 +165,7 @@ garantia — quem cede é a ordem. Emenda registrada em §8.
 
 ## Sprint 3 · Carteiras e importação
 
-Migration `0015`.
+Migration `0016`.
 
 - `crm_portfolios`, `crm_portfolio_companies`, `crm_assignment_history`
 - ~~Motor de importação copiado~~ — **entregue na Sprint 1, etapa 7**
@@ -164,7 +180,7 @@ Migration `0015`.
 
 ## Sprint 4 · Produtos, oportunidades e condições comerciais
 
-Migrations `0014`–`0017`.
+Migrations `0017`–`0020`.
 
 - `commercial_products` com `match_key`, `crm_loss_reasons`
 - `crm_opportunities` com unicidade de ativa por empresa × produto (D-015)
@@ -177,7 +193,7 @@ Migrations `0014`–`0017`.
 
 ## Sprint 5 · Atividades, agenda e timeline
 
-Migrations `0018`–`0019`.
+Migrations `0021`–`0022`.
 
 - `crm_activities` e `crm_tasks`
 - Timeline da negociação
