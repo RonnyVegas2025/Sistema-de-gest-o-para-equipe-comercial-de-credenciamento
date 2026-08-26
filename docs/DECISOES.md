@@ -1096,6 +1096,11 @@ e a qualquer outra interação, até uma nova submissão *daquela mesma action*.
 
 **Foi lido um log para explicar um evento que não ocorreu.**
 
+Primeira ocorrência da família nomeada em `CLAUDE.md` — *evidência produzida
+pelo mecanismo que deveria ter falhado não vale*. A mensagem na tela era o
+próprio defeito se fazendo passar por sintoma de outra coisa. A segunda
+ocorrência veio em D-043.
+
 **Decisão.** Feedback de formulário pertence à interação que o produziu, e a
 interação seguinte o encerra — abrir diálogo, fechar, cancelar, confirmar.
 Implementado em `useFeedbackDescartavel`, aplicado aos três formulários da tela
@@ -1527,6 +1532,13 @@ imprime o erro e **segue** para o bloco seguinte — o script recusou e escreveu
 trilha assim mesmo. Barreira que depende do cliente abortar não é barreira. E a
 leitura ingênua do resultado enganou: o banco ficou com zero linhas de trilha,
 que parecia prova de recusa e era o `delete` de limpeza tendo rodado.
+
+Segunda ocorrência da família nomeada em `CLAUDE.md` — *evidência produzida pelo
+mecanismo que deveria ter falhado não vale*; a primeira foi D-037. O que separou
+os casos foi o **segundo** erro: `relation "resultado_trilha" does not exist` só
+aparece se o bloco de trabalho nunca rodou, porque a limpeza bem-sucedida
+deixaria a temp table de pé. Quando sucesso e falha produzem o mesmo estado
+final, procurar um efeito colateral que só um dos dois produz.
 
 `0014_comportamento.sql` **continua em `supabase/checks/`** e continua indo para
 o painel: ele não altera status de nada e portanto não gera nem apaga trilha. O

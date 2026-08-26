@@ -128,6 +128,22 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
   o teste, quebrar o código de propósito, confirmar que reprova, restaurar.
   Sem isso o teste é uma afirmação, não uma garantia — e teste de segurança que
   passa por vacuidade é pior que teste nenhum, porque cria confiança.
+- **Evidência produzida pelo mecanismo que deveria ter falhado não vale.**
+  Família própria, ao lado da prova por mutação. Quando o defeito é justamente o
+  que fabrica a aparência de sucesso, olhar o resultado final confirma o
+  contrário do que se quer saber. Apareceu duas vezes na Sprint 2:
+  - o `Alert` pendurado mostrava a mensagem de erro do envio ANTERIOR — e essa
+    mensagem foi lida como prova de um bug que não existia, a ponto de um log de
+    Edge Function ser buscado para explicar um evento que nunca ocorreu (D-037);
+  - a barreira de cluster local, num bloco `do $$` à parte, não impedia nada — e
+    o banco terminava com **zero linhas de trilha**, que parecia recusa e era o
+    `delete` de limpeza tendo rodado (D-043).
+
+  **Técnica: quando sucesso e falha produzem o mesmo estado final, procurar um
+  efeito colateral que só um dos dois produz.** Foi o SEGUNDO erro que separou os
+  casos — `relation "resultado_trilha" does not exist` só aparece se o bloco de
+  trabalho nunca rodou; a limpeza bem-sucedida deixaria a temp table de pé.
+  Checar o primeiro sintoma não bastava, e não bastaria em nenhum dos dois casos.
 - **Contorno local para sintoma é sinal de defeito de padrão — procurar os
   irmãos antes de seguir.** Quando uma correção pontual resolve o sintoma num
   lugar, perguntar se o mesmo defeito existe nos casos análogos. O remendo deixa

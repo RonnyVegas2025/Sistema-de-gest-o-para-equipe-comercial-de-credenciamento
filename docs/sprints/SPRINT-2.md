@@ -671,6 +671,13 @@ recusa e era o `delete` de limpeza tendo rodado.
 não altera status de nada, então não gera nem apaga trilha. O recorte é
 *toca `crm_record_status_history`*, não uma categoria inteira em quarentena.
 
+É a **segunda vez nesta sprint** que um defeito fabrica a evidência que o
+inocenta — a primeira foi o `Alert` pendurado, que mostrava o erro da submissão
+anterior e fez com que se buscasse um log para explicar um evento que nunca
+ocorreu (D-037). A família passou a ter nome em `CLAUDE.md`, ao lado da prova
+por mutação, com a técnica que a desfaz: **quando sucesso e falha produzem o
+mesmo estado final, procurar um efeito colateral que só um dos dois produz.**
+
 Registrado em D-043, corrigindo a formulação inicial.
 
 ### Infraestrutura
