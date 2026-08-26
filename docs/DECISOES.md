@@ -1096,6 +1096,11 @@ e a qualquer outra interação, até uma nova submissão *daquela mesma action*.
 
 **Foi lido um log para explicar um evento que não ocorreu.**
 
+Primeira ocorrência da família nomeada em `CLAUDE.md` — *evidência produzida
+pelo mecanismo que deveria ter falhado não vale*. A mensagem na tela era o
+próprio defeito se fazendo passar por sintoma de outra coisa. A segunda
+ocorrência veio em D-043.
+
 **Decisão.** Feedback de formulário pertence à interação que o produziu, e a
 interação seguinte o encerra — abrir diálogo, fechar, cancelar, confirmar.
 Implementado em `useFeedbackDescartavel`, aplicado aos três formulários da tela
@@ -1451,6 +1456,139 @@ Exceção que só aparece quando procurada não é exceção monitorada.
 Barrar estruturalmente transformaria dado a corrigir em registro perdido, e **o
 que não entra não aparece para ser corrigido**. Na carga inicial isso
 significaria descartar exatamente as linhas que precisam de atenção.
+
+---
+
+## D-043 — Comportamento é nível de prova próprio, e o que toca trilha não sai do cluster local
+
+**Contexto.** A `0014` foi provada por mutação: trocando a bicondicional do
+`enforce_demand_origin_shape()` por uma implicação simples, `0014_verificacao.sql`
+seguiu com **todas as 52 linhas OK** e a linha proibida entrou no banco.
+
+Não é defeito daquele script. Um `*_verificacao.sql` lê o catálogo do Postgres:
+confere que a função existe, que a trigger é `BEFORE`, que `prosecdef` é falso,
+que o `execute` foi revogado, que o `WHEN` tem `is distinct from`. Nada disso
+alcança o que a função **decide**.
+
+Quatro scripts também casam texto no corpo, o que ajuda — e o quanto ajuda foi
+medido nesta sprint sobre a `stamp_status_transition`, já aplicada:
+
+| O que se fez ao corpo | `0010_verificacao.sql` |
+| --- | --- |
+| REMOVER a checagem de motivo da reativação | **reprova** — o texto sumiu |
+| envolvê-la em `if false then`, texto intacto | **passa, com tudo OK** |
+
+A busca textual pega a remoção descuidada. Não pega a regra desligada.
+
+**Decisão, parte 1 — a forma.**
+
+1. Regra que vive num corpo de função exige script de comportamento próprio,
+   que **escreve, mede e limpa**.
+2. Ele é **separado** do `*_verificacao.sql`, que permanece somente leitura.
+   Misturar os dois tiraria da verificação a propriedade de poder ser colada em
+   qualquer banco sem consequência.
+3. O contexto é **declarado, nunca herdado**. As barreiras são escritas
+   `auth.uid() is not null and ...`; sem JWT nenhuma dispara, e o script mediria
+   o console em vez da regra. Cada caso define `request.jwt.claim.sub`, e um
+   caso final mede o console de propósito — para que a porta fique escrita.
+4. A recusa é identificada pela **mensagem**, não só pelo `errcode`. Duas
+   barreiras diferentes recusam com o mesmo 42501; comparar só o código deixa um
+   caso passar pela barreira do vizinho.
+5. `reconstruir.sh --checks` roda o comportamento **depois** da verificação da
+   mesma migration, nunca no lugar dela.
+
+**Decisão, parte 2 — script que toca trilha não sai do cluster local.**
+
+Medir a família de status **produz** linhas em `crm_record_status_history`, e
+limpá-las exige apagar de lá. Que o dono do banco sempre pôde fazer isso, e que
+a remoção seja cirúrgica, é tecnicamente correto — e não é o argumento que
+decide.
+
+**A regra de D-023 existe para produzir um hábito, e o hábito é o que protege
+quando ninguém está prestando atenção.** No momento em que existir no
+repositório um script que apaga trilha e que foi feito para rodar no painel, ele
+vai ser rodado no painel. Não por quem o escreveu, que sabe exatamente o que ele
+faz — por alguém daqui a um ano, depurando outra coisa, que encontra o arquivo e
+o executa porque é assim que se verifica trilha neste projeto. Aí a remoção
+deixa de ser cirúrgica.
+
+A trilha é o único artefato do sistema irrecuperável por natureza. Foi o
+argumento para antecipar essas funções na fila (D-044); vale igualmente aqui.
+
+Três mecanismos, do mais fraco ao mais forte:
+
+| Onde | O quê |
+| --- | --- |
+| **localização** | `supabase/dev/comportamento/`, não `supabase/checks/` — este último é o diretório do que se cola no painel |
+| **cabeçalho** | o motivo escrito no arquivo, não só nesta decisão |
+| **recusa** | o script exige `crm.cluster_local = 'sim'`, que só `reconstruir.sh` define no banco que ele mesmo cria |
+
+A localização é o mecanismo que carrega o peso. Aviso em cabeçalho só é lido por
+quem já está prestando atenção — que é justamente quem não precisava do aviso.
+
+**A recusa fica DENTRO do bloco que trabalha, como primeira instrução.** Medido:
+com a barreira num `do $$` separado antes dele, o `psql` sem `ON_ERROR_STOP`
+imprime o erro e **segue** para o bloco seguinte — o script recusou e escreveu na
+trilha assim mesmo. Barreira que depende do cliente abortar não é barreira. E a
+leitura ingênua do resultado enganou: o banco ficou com zero linhas de trilha,
+que parecia prova de recusa e era o `delete` de limpeza tendo rodado.
+
+Segunda ocorrência da família nomeada em `CLAUDE.md` — *evidência produzida pelo
+mecanismo que deveria ter falhado não vale*; a primeira foi D-037. O que separou
+os casos foi o **segundo** erro: `relation "resultado_trilha" does not exist` só
+aparece se o bloco de trabalho nunca rodou, porque a limpeza bem-sucedida
+deixaria a temp table de pé. Quando sucesso e falha produzem o mesmo estado
+final, procurar um efeito colateral que só um dos dois produz.
+
+`0014_comportamento.sql` **continua em `supabase/checks/`** e continua indo para
+o painel: ele não altera status de nada e portanto não gera nem apaga trilha. O
+recorte é preciso — *toca `crm_record_status_history`* —, não uma categoria
+inteira posta de quarentena por precaução.
+
+**Se um dia for necessário verificar comportamento de trilha contra o banco
+real**, isso vira decisão própria, tomada na hora, com o risco na mesa — não
+herdada de um arquivo que já estava lá.
+
+**Alternativas descartadas.** Deixar as linhas de teste no histórico do banco
+real: contamina relatório para sempre, e o `[teste]` some junto com a entidade
+apagada, restando um `target_id` órfão. Manter os scripts em `checks/` com aviso
+no cabeçalho: é a formulação que esta decisão corrige.
+
+---
+
+## D-044 — Trilha que não grava é o defeito irrecuperável da família
+
+**Contexto.** O levantamento de 14 funções de trigger com regra no corpo
+mostrou famílias de defeito com gravidades diferentes. Uma delas não é
+comparável às outras.
+
+**A distinção.** Todo outro defeito desta família deixa rastro. A linha errada
+está no banco, e alguém pode encontrá-la — a origem proibida da `0014` aparece
+na tabela; o registro reativado indevidamente tem `changed_by` na trilha.
+
+Quando a trilha não grava, não há nada para descobrir depois. **A informação não
+existe, e a ausência é indistinguível de uma entidade que nunca mudou de
+status.** O defeito apaga a própria evidência de si mesmo.
+
+**Decisão.** As seis funções de trilha têm cobertura de comportamento
+antecipada, em `0013_comportamento.sql`, com um caso por escopo. Cada caso
+afirma cinco coisas, e cada uma corresponde a um modo de falhar:
+
+| Afirmação | Pega |
+| --- | --- |
+| exatamente 1 linha | não gravou · gravou duas vezes |
+| `scope` correto | cópia com o escopo do vizinho |
+| `reason` preenchido e igual ao informado | corpo esvaziado — o modo silencioso |
+| `ativo → inativo` | `old`/`new` trocados |
+| `changed_by` correto | perda do `auth.uid()` |
+
+**Um script com seis casos, não seis scripts.** As seis funções têm a mesma
+forma e foram escritas por cópia — que é exatamente por que o defeito é barato
+de introduzir, e por que a cobertura precisa vê-las lado a lado.
+
+Medido: `write_record_status_team()` esvaziada, `write_record_status_seller()`
+com o `scope` do vizinho e `write_record_status_company()` sem o motivo passam
+**as três** pela verificação estrutural, e reprovam nos casos 3, 4 e 5.
 
 ---
 

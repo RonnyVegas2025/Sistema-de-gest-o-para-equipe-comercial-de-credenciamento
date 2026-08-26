@@ -562,6 +562,141 @@ os demais devolvem números idênticos.
 
 ---
 
+## 8b · Comportamento das triggers já aplicadas
+
+A 0014 revelou uma lacuna que não é dela: **`*_verificacao.sql` lê o catálogo do
+Postgres e é cego para o corpo da função.** Quatro scripts casam texto no corpo,
+o que ajuda — mas um corpo que mantenha todos os trechos procurados dentro de um
+`if false then` passa na busca e não faz nada. Isso foi medido, não suposto.
+
+O levantamento encontrou 14 funções de trigger com regra no corpo. Esta etapa
+**não fecha todas** — antecipa as que não admitem correção posterior, e deixa o
+restante para a Sprint 3 com a forma já estabelecida.
+
+### Por que estas duas primeiro
+
+`enforce_reactivation_is_admin` guarda D-025, e sua queda é silenciosa: um
+registro reativado por quem não podia é idêntico a um reativado por quem podia.
+
+As seis funções de trilha são o caso irrecuperável:
+
+> Se a trilha não gravar, não há nada para descobrir depois. A informação não
+> existe, e a ausência é indistinguível do caso normal. Todo outro defeito desta
+> família deixa rastro — a linha errada está lá, e alguém pode encontrá-la. Este
+> apaga a própria evidência de si mesmo.
+
+E é barato de introduzir por acidente: as seis têm a mesma forma e foram
+escritas por cópia. Por isso **um script com seis casos**, e não seis scripts.
+
+### O que entrou
+
+| Arquivo | Cobre | Casos |
+| --- | --- | --- |
+| `supabase/dev/comportamento/0010_status.sql` | `enforce_inactivation_is_admin` (0003) · `enforce_reactivation_is_admin` (0008) · `stamp_status_transition` (0010) | 7 |
+| `supabase/dev/comportamento/0013_trilha.sql` | as seis funções de trilha (0008/0010, 0012, 0013) | 6 |
+
+**Os dois são exclusivos do cluster local e não vão para o painel** — ver
+"O que apagar trilha custou", adiante.
+
+`enforce_inactivation_is_admin` entrou junto porque o próprio script a
+encontrou: a primeira versão supunha que inativar não era privilégio de
+administrador, reprovou, e o errado era a suposição. As três vivem na mesma
+transição da mesma linha e não se medem separadas.
+
+Fica de fora `enforce_inactivation_is_manager_or_admin` (0003): existe, mas
+nenhuma tabela a aplica ainda. Não há como medir trigger que não está pendurada
+em nada — o caso entra quando a primeira das três tabelas nascer.
+
+### Duas exigências de forma que estes scripts estabelecem
+
+**O contexto é declarado, nunca herdado.** As três barreiras são escritas
+`auth.uid() is not null and ...`. No SQL Editor não há JWT: `auth.uid()` é nulo
+e nenhuma delas dispara. Um script que apenas tentasse inativar veria tudo
+passar — teria medido o console, não a regra. Cada caso define
+`request.jwt.claim.sub`, e um caso final mede o console de propósito, para que a
+porta fique escrita em vez de descoberta por acidente.
+
+**A recusa é identificada pela mensagem, não pelo errcode.** Duas barreiras
+diferentes recusam com o mesmo 42501, e as duas checagens de motivo com o mesmo
+23514. Comparar só o código deixaria um caso passar pela barreira do vizinho —
+que é a regra de CLAUDE.md aplicada a SQL.
+
+### O que as mutações mediram
+
+| Mutação | Estrutura | Comportamento |
+| --- | --- | --- |
+| `enforce_reactivation_is_admin` esvaziada com `if false then` | **passa** | caso 4 |
+| `enforce_inactivation_is_admin` esvaziada com `if false then` | **passa** | casos 1 e 2 |
+| checagem de motivo da reativação REMOVIDA | reprova | caso 5 |
+| a mesma checagem envolta em `if false then` | **passa** | caso 5 |
+| `write_record_status_team()` esvaziada | **passa** | caso 3 — "não gravou" |
+| `write_record_status_seller()` com o `scope` do vizinho | **passa** | caso 4 |
+| `write_record_status_company()` sem o motivo | **passa** | caso 5 — motivo nulo |
+| barreira do cluster local num bloco `do $$` à parte | — | o script rodou inteiro |
+
+Seis das sete primeiras são invisíveis à verificação estrutural. A última mediu
+a própria barreira desta etapa, e reprovou. A terceira linha
+contra a quarta é a demonstração inteira: apagar a regra deixa rastro no texto;
+envolvê-la em `if false then` não deixa nenhum.
+
+### O que apagar trilha custou
+
+Medir esta família **produz** linhas em `crm_record_status_history`, e limpá-las
+exige apagar de lá. Tecnicamente D-023 segue íntegro — a imutabilidade é contra
+a aplicação, o dono do banco sempre pôde apagar, e a remoção é cirúrgica. Não é
+o argumento que decide.
+
+> A regra existe para produzir um hábito, e o hábito é o que protege quando
+> ninguém está prestando atenção. No momento em que existir no repositório um
+> script que apaga linhas de trilha e que foi feito para rodar no painel, ele
+> vai ser rodado no painel. Não por quem o escreveu, que sabe exatamente o que
+> ele faz — por alguém daqui a um ano, depurando outra coisa, que encontra o
+> arquivo e o executa porque é assim que se verifica trilha neste projeto. E aí
+> a remoção deixa de ser cirúrgica.
+
+Os dois scripts saíram de `supabase/checks/` para `supabase/dev/comportamento/`,
+com o motivo no cabeçalho e uma recusa em tempo de execução: exigem
+`crm.cluster_local = 'sim'`, que só `reconstruir.sh` define. A localização é o
+mecanismo que carrega o peso — aviso em cabeçalho só é lido por quem já está
+prestando atenção.
+
+**A recusa fica dentro do bloco que trabalha, como primeira instrução.** A
+primeira tentativa a pôs num `do $$` separado antes dele, e não funcionou: o
+`psql` sem `ON_ERROR_STOP` imprime o erro e segue para o bloco seguinte — o
+script recusava e escrevia na trilha assim mesmo. Pior, a leitura ingênua do
+resultado enganou: o banco ficou com zero linhas de trilha, que parecia prova de
+recusa e era o `delete` de limpeza tendo rodado.
+
+`0014_comportamento.sql` continua em `checks/` e continua indo para o painel:
+não altera status de nada, então não gera nem apaga trilha. O recorte é
+*toca `crm_record_status_history`*, não uma categoria inteira em quarentena.
+
+É a **segunda vez nesta sprint** que um defeito fabrica a evidência que o
+inocenta — a primeira foi o `Alert` pendurado, que mostrava o erro da submissão
+anterior e fez com que se buscasse um log para explicar um evento que nunca
+ocorreu (D-037). A família passou a ter nome em `CLAUDE.md`, ao lado da prova
+por mutação, com a técnica que a desfaz: **quando sucesso e falha produzem o
+mesmo estado final, procurar um efeito colateral que só um dos dois produz.**
+
+Registrado em D-043, corrigindo a formulação inicial.
+
+### Infraestrutura
+
+- `reconstruir.sh --checks` passa a rodar os scripts de comportamento
+  intercalados, depois da verificação da mesma migration — nunca no lugar dela.
+  Varre os dois diretórios, e a diferença entre eles está escrita ali.
+- `supabase/dev/01_harness_perfis.sql`: um administrador e um não-administrador
+  para o cluster local, **nunca aplicado no projeto hospedado**, onde os perfis
+  vêm do seed. Aplicado *lazy*, imediatamente antes do primeiro script de
+  comportamento: inseri-los junto do harness mudaria a contagem de
+  `0002_verificacao.sql`, e fixture que altera resultado de verificação de
+  schema deixa de ser fixture.
+
+*Aceite:* 7 casos `OK` na 0010, 6 na 0013, com o cluster reconstruído do zero; e
+a tabela de mutações acima reproduzida.
+
+---
+
 ## 9 · Verificação final e documentação
 
 - `npm run verify` limpo;
