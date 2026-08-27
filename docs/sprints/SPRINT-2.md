@@ -387,7 +387,7 @@ porque "não encontrado" e "fornecedor fora do ar" não podem virar a mesma tela
 
 *Aceite — CUMPRIDO em 25/08/2026, contra o banco real: 46 de 46 `OK`.*
 
-As três linhas que fecham D-018:
+As três linhas sobre o recorte:
 
 ```
 as três policies chamam scoped_seller_ids        3 = 3  OK
@@ -399,11 +399,33 @@ Provado por mutação, cinco vezes — entre elas **só o `UPDATE` perdendo o
 recorte**, que é o modo de falhar que não deixa rastro: a leitura continua
 correta enquanto a escrita não é.
 
-**O que esta etapa provou, além de si mesma.** A regra de aceite desta sprint
-existia para evitar o DE-025 do sistema de origem, onde o recorte do comercial
-foi adiado na Sprint 2 e seguia aberto três sprints depois. Aqui a função entrou
-na Sprint 1 e o enforcement na Sprint 2 — uma sprint depois, com verificação que
-reprova se cair. A regra funcionou na primeira vez em que foi cobrada.
+### Correção de registro, 26/08/2026 — D-018 não fechou aqui
+
+*A versão anterior desta seção dizia "as três linhas que fecham D-018". Era
+forte demais, e a correção importa mais que a etapa.*
+
+Aquelas três linhas leem o `polqual` no catálogo do Postgres. Provam que a
+policy **existe** e que **chama** `scoped_seller_ids()`. **Não provam que ela
+recorta** — nenhuma linha foi lida por um consultor e negada a outro.
+
+O mesmo vale para o gate de cinco usuários da Sprint 1: rodou pelo SQL Editor,
+que é dono, e **o dono não é filtrado pela RLS**. Aquele 8/8 mediu a função de
+escopo, não a policy. Continua valendo pelo que mede — a **união** contra
+"primeiro papel encontrado" (D-005) é propriedade da função, e isso não muda.
+
+Medido em 26/08/2026 no cluster local: `set role authenticated` devolve
+`permission denied for table companies`. O harness nunca reproduziu os grants
+que o Supabase configura, então **nenhuma asserção de RLS foi executada até
+hoje**, nem aqui nem no painel.
+
+A regra de aceite desta sprint continua tendo funcionado: nenhuma tabela `crm_*`
+nasceu sem policy com recorte na mesma migration, e é uma sprint — não três — de
+distância entre a função e o enforcement. O que muda é o verbo. **Aplicado não é
+exercitado**, e era exatamente ter provado que nos separava do DE-025. Declarar
+vitória sobre uma verificação que não verifica é repetir DE-025 com documentação
+melhor — e pior, porque ficaria uma linha escrita dizendo que estava fechado.
+
+**D-018 fica como aplicada e não exercitada até a etapa 5c-0.**
 
 ---
 

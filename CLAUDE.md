@@ -160,6 +160,26 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
   revela: se remover a barreira alvo e o teste continuar verde, ele nunca a
   testou. Caso real: fixtures com `id: 'a1'` reprovavam por uuid inválido, e a
   recusa de auto-desativação nunca era alcançada (Sprint 2, etapa 1b).
+- **Policy só está provada quando alguém sujeito a ela executou a consulta.**
+  Ler o `polqual` no catálogo prova que a policy existe e que chama a função de
+  escopo — não que ela recorta. E nem o `psql` local nem o SQL Editor do painel
+  provam: os dois conectam como **dono**, que não é filtrado por RLS. Exercitar
+  exige `set local role authenticated` com JWT declarado, e isso exige que o
+  harness reproduza os grants do Supabase — sem eles o caso reprova por
+  `permission denied`, que é recusa pelo motivo errado (D-018).
+- **`UPDATE` com `where id = <linha invisível>` não testa a policy de UPDATE.**
+  A de SELECT filtra a linha antes, e o resultado é 0 com ou sem recorte na
+  escrita. Quem isola a policy de UPDATE é o `update` **sem `where`** — que é,
+  aliás, a forma que um consultor escreveria para reatribuir tudo para si de uma
+  vez, e ela alcança linhas que ele nem enxerga. Medido: 1 linha com recorte, 3
+  sem.
+- **Em tabela com SELECT recortado, o `with check` do UPDATE é redundante.** O
+  Postgres exige que a linha ATUALIZADA continue visível sob a policy de SELECT,
+  então empurrar o próprio registro para fora do escopo já é recusado por ela.
+  Consequência para o teste: um caso que espera 42501 ali **não prova nada sobre
+  o `with check`** — medido isolando as duas. Onde o `with check` é a única
+  barreira é na tabela de **SELECT amplo com escrita recortada** (`companies`,
+  §5.2), e lá nada na leitura denuncia a ausência dele.
 - **Recorte se verifica em TODAS as policies de escrita, não só na de leitura.**
   Uma tabela com `SELECT` recortado e `UPDATE` aberto deixa o consultor
   reatribuir para si um registro fora do escopo — e o `SELECT` recortado

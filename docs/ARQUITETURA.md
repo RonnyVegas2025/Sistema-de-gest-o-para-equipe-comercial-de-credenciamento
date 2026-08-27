@@ -151,11 +151,14 @@ implementação em `case`, os casos de consultor, gestor, diretor e administrado
 ficam **idênticos**, e só o de vínculo duplo cai. É por isso que o gate tem cinco
 usuários.
 
-### D-018 fechou em 25/08/2026
+### D-018 — o recorte está APLICADO; ainda NÃO foi EXERCITADO
 
-**A função deixou de estar provada em isolamento e passou a proteger dados.** A
-migration `0013` levou o recorte a `crm_company_relationships`, aplicada no
-banco real com 46 checagens `OK` — três delas conferindo o recorte:
+*Registro corrigido em 26/08/2026. A formulação anterior dizia "D-018 fechou", e
+era forte demais.*
+
+**O que está provado.** A migration `0013` levou o recorte a
+`crm_company_relationships`, aplicada no banco real com 46 checagens `OK` — três
+delas sobre o recorte:
 
 ```
 as três policies chamam scoped_seller_ids        3 = 3
@@ -163,19 +166,42 @@ o predicado incide sobre responsible_seller_id   3 = 3
 ramo de gestão para responsável nulo             3 = 3
 ```
 
-**O contraste com o sistema de origem é o ponto.** Lá, DE-025 adiou o recorte do
-comercial na Sprint 2, e ele seguia aberto **três sprints depois** — a intenção
-existia; o que faltou foi o momento em que a dívida se tornava visível.
+Está nas TRÊS policies, não só na de leitura — `SELECT` recortado com `UPDATE`
+aberto deixaria o consultor reatribuir para si um registro fora do escopo, e o
+`SELECT` esconderia a operação depois de feita. Cinco mutações reprovam o
+script, entre elas só o `UPDATE` perdendo o recorte.
 
-Aqui a função entrou na Sprint 1 e o *enforcement* na Sprint 2, uma sprint
-depois, **com verificação que reprova se cair**. Não foi disciplina: foi a regra
-de aceite da Sprint 2 — nenhuma tabela `crm_*` nasce sem a sua policy com
-recorte na mesma migration — fazendo exatamente o que ela existia para fazer.
+**O que NÃO está provado, e é a parte que importa.** Aquelas três linhas leem o
+`polqual` no catálogo do Postgres. Elas provam que a policy **existe** e que
+**chama** `scoped_seller_ids()`. Não provam que ela **recorta** — nenhuma linha
+foi lida por um consultor e negada a outro.
 
-**E o recorte está nas três policies, não só na de leitura.** `SELECT` recortado
-com `UPDATE` aberto deixaria o consultor reatribuir para si um registro fora do
-escopo, e o `SELECT` esconderia a operação depois de feita. Provado por mutação:
-derrubar o recorte de qualquer uma das três reprova o script.
+E não é só o script da `0013`:
+
+| O que rodou | Como rodou | O que mediu |
+| --- | --- | --- |
+| `0013_verificacao.sql`, `0014_verificacao.sql` | SQL Editor, como dono | texto do predicado |
+| gate de cinco usuários da Sprint 1, 8/8 `OK` | SQL Editor, como dono | `scoped_seller_ids()`, a função |
+| tudo no cluster local | `psql` como `postgres` | idem — RLS ignorada |
+
+**O dono do banco não é filtrado pela RLS.** Medido em 26/08/2026: no cluster
+local, `set role authenticated` devolve `permission denied for table companies`,
+porque o harness nunca reproduziu os grants que o Supabase configura. Nenhuma
+asserção de RLS foi executada até hoje — nem aqui, nem no painel.
+
+O gate de cinco usuários continua valendo pelo que ele mede: a **união** de
+escopos contra "primeiro papel encontrado" (D-005), que é uma propriedade da
+função. Isso não muda.
+
+**Por que esta correção existe.** A diferença entre este sistema e o de origem
+era ter provado. Em DE-025 o recorte do comercial foi adiado na Sprint 2 e
+seguia aberto três sprints depois — a intenção existia. Declarar vitória sobre
+uma verificação que não verifica é repetir DE-025 com documentação melhor, e o
+custo é maior: aqui haveria uma linha escrita dizendo que está fechado.
+
+**A prova real vem na etapa 5c-0 da Sprint 2**, quando o harness ganhar os
+grants e a bateria de §6.1 puder rodar sob `authenticated`, com JWT por papel e
+prova por mutação. Até lá, D-018 é **aplicada e não exercitada**.
 
 ## 8. Frontend
 
@@ -196,7 +222,7 @@ são próprias, deduplicando por `source_ref` e nunca por nome.
 
 | Parece existir | Não existe |
 | --- | --- |
-| ~~Policies com recorte de escopo~~ | **existe desde 25/08/2026** — `crm_company_relationships` (`0013`), nas três policies. Ver §7. As demais tabelas de §5.3 nascem nas sprints seguintes |
+| Policies com recorte de escopo **verificadas** | as policies existem desde 25/08/2026 (`0013`, nas três) e o predicado está conferido no catálogo — mas **nenhuma nunca foi exercitada**: tudo rodou como dono, com RLS ignorada. Ver §7 |
 | Telas comerciais | nenhuma. Só login, recuperação, troca de senha e `/inicio` |
 | Tela de importação | Sprint 3 |
 | Dados de estrutura comercial | as quatro tabelas estão vazias — a carga depende de exportação do Painel |
