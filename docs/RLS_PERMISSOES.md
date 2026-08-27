@@ -387,12 +387,73 @@ tarde que "`companies` tem SELECT amplo, logo o CRM inteiro poderia ter".
 
 ---
 
+## 5.8 O `with check` do UPDATE — onde ele age, e onde é redundante
+
+Medido em 26/08/2026, isolando as duas policies em
+`crm_company_relationships`:
+
+| Estado | Consultor move o próprio registro para outra equipe |
+| --- | --- |
+| policies íntegras | recusa `42501` |
+| `with check (true)` no UPDATE | **recusa `42501` — ainda** |
+| `with check (true)` **e** SELECT amplo | **aceita** |
+
+**O Postgres exige que a linha ATUALIZADA continue visível sob a policy de
+SELECT.** Onde SELECT e UPDATE têm o mesmo predicado, a de SELECT já recusa
+empurrar o registro para fora do escopo, e o `with check` não muda nada.
+
+### A consequência que importa
+
+**Onde o `with check` é a ÚNICA barreira é em tabela de SELECT amplo com escrita
+recortada.** Nesta especificação isso é `companies` (§5.2) — e é justamente
+onde ninguém pensaria em olhar, porque a leitura ampla dá a impressão de tabela
+sem restrição. Some o `with check` de uma tabela dessas e **nada na leitura
+denuncia**: todo mundo continua vendo tudo, como sempre viu.
+
+Regra de escrita: **o `with check` continua obrigatório em toda policy de
+UPDATE**, mesmo onde é redundante. Redundância aqui custa nada e some sozinha se
+o SELECT for alargado um dia — e alargar SELECT é a mudança que ninguém associa
+a risco de escrita.
+
+Regra de verificação, que é onde isso morde: **um caso que espera `42501` numa
+tabela de SELECT recortado não prova nada sobre o `with check`.** Ele passa pela
+policy de SELECT. Provar o `with check` exige uma tabela em que as duas divirjam
+— ou desligar o SELECT no teste, que é pior.
+
+---
+
 # 6. Verificação
 
 ## 6.1 Testes obrigatórios de RLS
 
 Definição de pronto de toda sprint que toque em policy (D-018). Para cada papel
 e cada vínculo:
+
+> **Como esta bateria roda — decidido em 26/08/2026 (Sprint 2, etapa 5c-0).**
+>
+> **No cluster local**, por `supabase/dev/reconstruir.sh --checks`, sob
+> `set local role authenticated` com `request.jwt.claim.sub` declarado por caso.
+> Não roda no projeto hospedado: ela fabrica hierarquia inteira, e perfis exigem
+> linhas em `auth.users`.
+>
+> Três armadilhas medidas, que valem para qualquer caso novo:
+>
+> 1. **Sem trocar de papel, tudo passa.** `psql` e o SQL Editor conectam como
+>    dono, que não é filtrado por RLS. Um caso que só conta linhas mede o
+>    próprio privilégio.
+> 2. **`UPDATE ... where id = <linha invisível>` não testa a policy de UPDATE.**
+>    A de SELECT filtra antes; dá 0 linhas com ou sem recorte na escrita. Use
+>    `update` **sem `where`** e meça o EFEITO — quantas linhas terminam
+>    apontando para o ator —, não o `row_count`: a linha do próprio ator é
+>    alcançada de forma legítima.
+> 3. **Esperar `42501` em tabela de SELECT recortado não prova o `with check`.**
+>    Ver §5.8.
+>
+> Limite conhecido: a RLS passa a ser provada num ambiente e não no outro. O que
+> fica descoberto é divergência entre eles — e não é hipotético, já que os grants
+> de `authenticated` precisaram ser reproduzidos à mão no harness. Estrutura
+> igual + comportamento provado num deles **não** é comportamento provado nos
+> dois.
 
 | Cenário | Esperado |
 | --- | --- |
@@ -404,7 +465,7 @@ e cada vínculo:
 | Diretor lê carteira de outra diretoria | zero linhas |
 | Pessoa gestor **e** vendedor | união dos dois conjuntos |
 | Usuário sem vínculo em `sellers` | zero linhas, sem erro |
-| Consultor tenta reatribuir | negado |
+| Consultor tenta reatribuir | negado — medir com `update` sem `where` (§6.1) |
 | Gestor reatribui fora do escopo | negado |
 | Qualquer papel tenta DELETE | negado |
 | Usuário altera o próprio `role` | negado pelo trigger |

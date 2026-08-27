@@ -395,9 +395,15 @@ o predicado incide sobre responsible_seller_id   3 = 3  OK
 ramo de gestão para responsável nulo             3 = 3  OK
 ```
 
-Provado por mutação, cinco vezes — entre elas **só o `UPDATE` perdendo o
-recorte**, que é o modo de falhar que não deixa rastro: a leitura continua
-correta enquanto a escrita não é.
+Provado por mutação, cinco vezes.
+
+> **Correção de 26/08/2026 — a mutação "só o `UPDATE` perdendo o recorte" era
+> vácua.** Ela media com `update ... where id = <linha invisível>`, e essa forma
+> devolve 0 linhas **com ou sem** recorte na escrita: a policy de SELECT filtra a
+> linha antes de a de UPDATE ser consultada. O recorte do `UPDATE` está lá — a
+> estrutura confirma —, mas a prova apresentada não era prova. Quem isola a
+> policy de UPDATE é o `update` **sem `where`**, e é assim que a etapa 5c-0
+> passou a medir: 1 linha com recorte, 3 sem.
 
 ### Correção de registro, 26/08/2026 — D-018 não fechou aqui
 
@@ -562,11 +568,46 @@ incluindo a resposta bruta da requisição — não só pelo que a tela desenha.
 
 ---
 
-## 8 · Bateria de RLS §6.1 — agora verificável
+## 8 · Bateria de RLS §6.1 — CUMPRIDA em 26/08/2026, na etapa 5c-0
 
 Os cenários que a Sprint 1 registrou como "não verificáveis, exigem tabelas da
-Sprint 2" passam a ser executáveis. Rodam contra o banco real, pelo SQL Editor,
-na forma do gate da Sprint 1: um arquivo, uma colagem, uma tabela de saída.
+Sprint 2" foram executados — em `supabase/dev/comportamento/0014_rls.sql`, com
+11 casos, todos `OK`, e seis mutações.
+
+### Correção de plano: roda no CLUSTER, não no projeto hospedado
+
+O plano original previa esta bateria "contra o banco real, pelo SQL Editor, na
+forma do gate da Sprint 1". **Não dá, e o motivo é do próprio conteúdo dela.**
+
+Ela precisa de uma hierarquia comercial inteira — dois consultores em equipes
+distintas, um gestor, um diretor, um usuário de vínculo duplo, um administrador.
+Perfis exigem linhas em `auth.users`, e o schema de autenticação de um projeto
+real não é lugar de fixture. Reusar os cinco usuários do seed também não serve:
+o caso de vínculo duplo exigiria alterar vínculos reais, contaminando o gate.
+
+### A consequência, escrita como limite e não como equivalência
+
+**A RLS passa a ser provada no cluster local, e não no projeto hospedado. O que
+fica descoberto é divergência entre os dois ambientes.**
+
+Isso não é hipotético. Foi exatamente uma divergência assim que produziu esta
+etapa: o Supabase concede privilégios de tabela a `anon` e `authenticated` por
+bootstrap, o harness nunca reproduziu isso, e a consequência — nenhuma asserção
+de RLS jamais executada — passou despercebida por duas sprints. Agora os grants
+existem em `supabase/dev/02_harness_grants.sql`, **reproduzidos à mão**, e mão
+diverge.
+
+O que continua verificável no painel é a estrutura: os `*_verificacao.sql`
+conferem que a policy existe, sobre qual coluna incide e que chama a função de
+escopo. **Estrutura igual nos dois ambientes + comportamento provado num deles**
+não é o mesmo que comportamento provado nos dois, e este parágrafo existe para
+que ninguém leia como se fosse.
+
+Mitigação disponível, não implementada: um script somente-leitura que compare os
+grants do projeto hospedado com os do harness. Fica proposto — vale a decisão
+quando houver um segundo caso de divergência, ou antes se alguém quiser.
+
+### Os 11 casos
 
 | Cenário | Esperado |
 | --- | --- |
@@ -578,9 +619,28 @@ na forma do gate da Sprint 1: um arquivo, uma colagem, uma tabela de saída.
 | usuário de vínculo duplo | a **união** dos dois conjuntos |
 | qualquer papel tenta `DELETE` | `DELETE 0` — RLS filtra, não levanta |
 
-*Aceite:* todas as linhas `OK`, e cada uma provada por mutação. O caso de vínculo
-duplo é o que uma implementação errada reprova: com "primeiro papel encontrado",
-os demais devolvem números idênticos.
+*Aceite — CUMPRIDO em 26/08/2026: 11 de 11 `OK`.* O caso de vínculo duplo é o
+que uma implementação errada reprova: com "primeiro papel encontrado", os demais
+devolvem números idênticos.
+
+O cenário de contatos fora do escopo fica para a etapa 6 — `crm_contacts` nasce
+na `0015`.
+
+### Dois casos que passavam pela barreira errada
+
+**`UPDATE ... where id = <linha invisível>` não testa a policy de UPDATE.** A de
+SELECT filtra a linha antes, e o resultado é 0 com ou sem recorte na escrita.
+Descoberto porque a mutação que abre só o UPDATE **não reprovava nada**. Quem
+isola é o `update` sem `where` — 1 linha com recorte, 3 sem — que é, aliás, a
+forma que um consultor escreveria para reatribuir tudo para si de uma vez.
+
+Isso invalida retroativamente a mutação equivalente da `0013`, corrigida na §5.
+
+**O caso do `with check` recusa 42501 mesmo com `with check (true)`.** O Postgres
+exige que a linha atualizada continue visível sob a policy de SELECT, então numa
+tabela de SELECT recortado o `with check` é redundante — e o caso não detecta a
+ausência dele. Está rotulado dizendo isso. Generalizado em `RLS_PERMISSOES.md`
+§5.8: onde o `with check` é a única barreira é em tabela de **SELECT amplo**.
 
 ---
 

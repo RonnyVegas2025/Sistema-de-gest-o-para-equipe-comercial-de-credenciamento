@@ -169,7 +169,14 @@ ramo de gestão para responsável nulo             3 = 3
 Está nas TRÊS policies, não só na de leitura — `SELECT` recortado com `UPDATE`
 aberto deixaria o consultor reatribuir para si um registro fora do escopo, e o
 `SELECT` esconderia a operação depois de feita. Cinco mutações reprovam o
-script, entre elas só o `UPDATE` perdendo o recorte.
+script.
+
+**Ressalva de 26/08/2026: a mutação "só o `UPDATE` perdendo o recorte" era
+vácua.** Media com `update ... where id = <linha invisível>`, e essa forma
+devolve 0 linhas **com ou sem** recorte na escrita, porque a policy de SELECT
+filtra a linha antes de a de UPDATE ser consultada. O recorte existe — a
+estrutura confirma —, mas aquela prova não provava. Refeita na etapa 5c-0 com
+`update` **sem `where`**: 1 linha com recorte, 3 sem.
 
 **O que NÃO está provado, e é a parte que importa.** Aquelas três linhas leem o
 `polqual` no catálogo do Postgres. Elas provam que a policy **existe** e que
