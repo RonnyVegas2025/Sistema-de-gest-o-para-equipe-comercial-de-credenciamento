@@ -603,9 +603,17 @@ escopo. **Estrutura igual nos dois ambientes + comportamento provado num deles**
 não é o mesmo que comportamento provado nos dois, e este parágrafo existe para
 que ninguém leia como se fosse.
 
-Mitigação disponível, não implementada: um script somente-leitura que compare os
-grants do projeto hospedado com os do harness. Fica proposto — vale a decisão
-quando houver um segundo caso de divergência, ou antes se alguém quiser.
+Mitigação disponível, **não implementada e com gatilho escrito** — A-007:
+
+> Um script somente-leitura que compare os grants do projeto hospedado com os do
+> harness. **Gatilho: a primeira divergência observada entre os dois ambientes**
+> — um script que passe local e falhe no hospedado, ou o contrário. Nesse
+> momento, construir.
+
+Proposta sem gatilho vira proposta esquecida, e esta em particular sumiria bem:
+enquanto nada diverge, ninguém sente falta dela — e é justamente quando algo
+diverge que ela precisaria já existir. O gatilho é o que a traz de volta na hora
+certa em vez de na hora em que alguém lembrar.
 
 ### Os 11 casos
 

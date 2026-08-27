@@ -144,6 +144,19 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
   casos — `relation "resultado_trilha" does not exist` só aparece se o bloco de
   trabalho nunca rodou; a limpeza bem-sucedida deixaria a temp table de pé.
   Checar o primeiro sintoma não bastava, e não bastaria em nenhum dos dois casos.
+- **Mutação que NÃO reprova é sempre suspeita.** É o caso mais perigoso da
+  família acima, porque as duas leituras possíveis produzem o mesmo verde: a
+  confortável é *"o teste é robusto"*; a correta costuma ser *"o teste não
+  mede"*. E a leitura confortável não custa nada — basta seguir em frente.
+  Quebrar a barreira de propósito e ver o teste continuar verde é resultado a
+  investigar, nunca a comemorar. Três vezes nesta sprint:
+  - fixtures com `id: 'a1'` reprovavam por uuid inválido, e a recusa de
+    auto-desativação nunca era alcançada (etapa 1b);
+  - abrir só a policy de `UPDATE` não reprovava nada — o caso media com
+    `where id = <linha invisível>`, forma que a policy de SELECT filtra antes
+    (etapa 5c-0, e invalidou a M2 da `0013`);
+  - `with check (true)` não reprovava nada — a recusa vinha da policy de SELECT
+    aplicada à linha nova (etapa 5c-0, `RLS_PERMISSOES.md` §5.8).
 - **Contorno local para sintoma é sinal de defeito de padrão — procurar os
   irmãos antes de seguir.** Quando uma correção pontual resolve o sintoma num
   lugar, perguntar se o mesmo defeito existe nos casos análogos. O remendo deixa

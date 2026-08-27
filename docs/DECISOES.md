@@ -1627,4 +1627,5 @@ com o `scope` do vizinho e `write_record_status_company()` sem o motivo passam
 | A-003 | ~~Quem inativa o quê~~ | **Resolvido em D-022** |
 | A-004 | Vínculo `crm_tasks` → `crm_activities` na conclusão | Sprint 5; a coluna `source_task_id` já nasce prevista |
 | A-005 | Extração de `@vegas/tokens` e `@vegas/ui` | Quando houver terceiro sistema e estabilidade de componentes |
+| A-007 | Script de comparação de grants entre cluster e painel | **Gatilho: a primeira divergência observada entre os dois ambientes** — um script que passe local e falhe no hospedado, ou o contrário. Nesse momento, construir. Antes disso não: a etapa 5c-0 já reproduziu os grants à mão, e um comparador sem caso concreto para explicar mede o que se imagina, não o que diverge |
 | A-006 | `ARQUITETURA.md` | Sprint 0, **depois** de a fundação ser copiada. Região do Supabase, região/runtime da Vercel, IDs de ambiente, URLs e fornecedor de CNPJ ficam marcados como "a confirmar após configuração" — não se fabrica informação de ambiente |
