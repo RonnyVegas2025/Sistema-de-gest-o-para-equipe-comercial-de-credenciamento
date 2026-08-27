@@ -11,8 +11,16 @@
  * forma abaixo foi escrita a partir da saída desses scripts contra o banco
  * real, não a partir do modelo em prosa.
  *
- * Estado verificado: migrations 0001 a 0007 aplicadas e verificadas contra o banco
- * real. `source_ref` entra nas quatro entidades pela 0007.
+ * Estado verificado: migrations 0001 a 0014 aplicadas e verificadas contra o banco
+ * real. `source_ref` entra nas quatro entidades pela 0007; `companies` pela
+ * 0012; `crm_company_relationships` pela 0013; `crm_demand_origins` e
+ * `crm_accreditation_demands` pela 0014.
+ *
+ * As quatro tabelas abaixo foram transcritas da saída de
+ * `information_schema.columns` contra o schema reconstruído do zero — não do
+ * modelo em prosa. `companies` NÃO tem `source_ref` (D-004: o CRM é a fonte de
+ * verdade do cadastro) nem coluna de responsável (D-006: o responsável vive no
+ * relacionamento).
  *
  * REGRA AO MEXER: este arquivo só muda depois de uma migration aplicada E
  * verificada, refletindo a saída do script. Nunca "adiantar" uma coluna que o
@@ -325,6 +333,301 @@ export type Database = {
           },
         ]
       }
+      companies: {
+        Row: {
+          id: string
+          legal_name: string
+          trade_name: string | null
+          cnpj: string | null
+          legacy_customer_code: string | null
+          parent_company_id: string | null
+          relationship_start_date: string | null
+          status: Database['public']['Enums']['entity_status']
+          situacao_cadastral: string | null
+          cnae_principal: string | null
+          atividade: string | null
+          cep: string | null
+          logradouro: string | null
+          numero: string | null
+          complemento: string | null
+          bairro: string | null
+          municipio: string | null
+          uf: string | null
+          telefone: string | null
+          cnpj_lookup_at: string | null
+          cnpj_lookup_source: string | null
+          latitude: number | null
+          longitude: number | null
+          inactivated_at: string | null
+          inactivated_by: string | null
+          inactivation_reason: string | null
+          reactivation_reason: string | null
+          created_at: string
+          updated_at: string
+          is_merchant: boolean
+          is_client_company: boolean
+        }
+        Insert: {
+          id?: string
+          legal_name: string
+          trade_name?: string | null
+          cnpj?: string | null
+          legacy_customer_code?: string | null
+          parent_company_id?: string | null
+          relationship_start_date?: string | null
+          status?: Database['public']['Enums']['entity_status']
+          situacao_cadastral?: string | null
+          cnae_principal?: string | null
+          atividade?: string | null
+          cep?: string | null
+          logradouro?: string | null
+          numero?: string | null
+          complemento?: string | null
+          bairro?: string | null
+          municipio?: string | null
+          uf?: string | null
+          telefone?: string | null
+          cnpj_lookup_at?: string | null
+          cnpj_lookup_source?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          inactivated_at?: string | null
+          inactivated_by?: string | null
+          inactivation_reason?: string | null
+          reactivation_reason?: string | null
+          created_at?: string
+          updated_at?: string
+          is_merchant?: boolean
+          is_client_company?: boolean
+        }
+        Update: {
+          id?: string
+          legal_name?: string
+          trade_name?: string | null
+          cnpj?: string | null
+          legacy_customer_code?: string | null
+          parent_company_id?: string | null
+          relationship_start_date?: string | null
+          status?: Database['public']['Enums']['entity_status']
+          situacao_cadastral?: string | null
+          cnae_principal?: string | null
+          atividade?: string | null
+          cep?: string | null
+          logradouro?: string | null
+          numero?: string | null
+          complemento?: string | null
+          bairro?: string | null
+          municipio?: string | null
+          uf?: string | null
+          telefone?: string | null
+          cnpj_lookup_at?: string | null
+          cnpj_lookup_source?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          inactivated_at?: string | null
+          inactivated_by?: string | null
+          inactivation_reason?: string | null
+          reactivation_reason?: string | null
+          created_at?: string
+          updated_at?: string
+          is_merchant?: boolean
+          is_client_company?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'companies_parent_company_id_fkey'
+            columns: ['parent_company_id']
+            isOneToOne: false
+            referencedRelation: 'companies'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      crm_company_relationships: {
+        Row: {
+          id: string
+          company_id: string
+          relationship_type: Database['public']['Enums']['crm_relationship_type']
+          origin: Database['public']['Enums']['crm_opportunity_origin']
+          responsible_seller_id: string | null
+          team_id: string | null
+          relationship_started_at: string | null
+          ended_at: string | null
+          ended_by: string | null
+          end_reason: string | null
+          status: Database['public']['Enums']['entity_status']
+          inactivated_at: string | null
+          inactivated_by: string | null
+          inactivation_reason: string | null
+          reactivation_reason: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          company_id: string
+          relationship_type?: Database['public']['Enums']['crm_relationship_type']
+          origin?: Database['public']['Enums']['crm_opportunity_origin']
+          responsible_seller_id?: string | null
+          team_id?: string | null
+          relationship_started_at?: string | null
+          ended_at?: string | null
+          ended_by?: string | null
+          end_reason?: string | null
+          status?: Database['public']['Enums']['entity_status']
+          inactivated_at?: string | null
+          inactivated_by?: string | null
+          inactivation_reason?: string | null
+          reactivation_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          company_id?: string
+          relationship_type?: Database['public']['Enums']['crm_relationship_type']
+          origin?: Database['public']['Enums']['crm_opportunity_origin']
+          responsible_seller_id?: string | null
+          team_id?: string | null
+          relationship_started_at?: string | null
+          ended_at?: string | null
+          ended_by?: string | null
+          end_reason?: string | null
+          status?: Database['public']['Enums']['entity_status']
+          inactivated_at?: string | null
+          inactivated_by?: string | null
+          inactivation_reason?: string | null
+          reactivation_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'crm_company_relationships_company_id_fkey'
+            columns: ['company_id']
+            isOneToOne: false
+            referencedRelation: 'companies'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'crm_company_relationships_responsible_seller_id_fkey'
+            columns: ['responsible_seller_id']
+            isOneToOne: false
+            referencedRelation: 'sellers'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'crm_company_relationships_team_id_fkey'
+            columns: ['team_id']
+            isOneToOne: false
+            referencedRelation: 'teams'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      crm_demand_origins: {
+        Row: {
+          id: string
+          match_key: string
+          name: string
+          requires_client_company: boolean
+          status: Database['public']['Enums']['entity_status']
+          inactivated_at: string | null
+          inactivated_by: string | null
+          inactivation_reason: string | null
+          reactivation_reason: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          match_key: string
+          name: string
+          requires_client_company?: boolean
+          status?: Database['public']['Enums']['entity_status']
+          inactivated_at?: string | null
+          inactivated_by?: string | null
+          inactivation_reason?: string | null
+          reactivation_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          match_key?: string
+          name?: string
+          requires_client_company?: boolean
+          status?: Database['public']['Enums']['entity_status']
+          inactivated_at?: string | null
+          inactivated_by?: string | null
+          inactivation_reason?: string | null
+          reactivation_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      crm_accreditation_demands: {
+        Row: {
+          id: string
+          merchant_company_id: string
+          origin_id: string
+          client_company_id: string | null
+          requested_at: string | null
+          responsible_seller_id: string | null
+          team_id: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          merchant_company_id: string
+          origin_id: string
+          client_company_id?: string | null
+          requested_at?: string | null
+          responsible_seller_id?: string | null
+          team_id?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          merchant_company_id?: string
+          origin_id?: string
+          client_company_id?: string | null
+          requested_at?: string | null
+          responsible_seller_id?: string | null
+          team_id?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'crm_accreditation_demands_merchant_company_id_fkey'
+            columns: ['merchant_company_id']
+            isOneToOne: false
+            referencedRelation: 'companies'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'crm_accreditation_demands_origin_id_fkey'
+            columns: ['origin_id']
+            isOneToOne: false
+            referencedRelation: 'crm_demand_origins'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'crm_accreditation_demands_client_company_id_fkey'
+            columns: ['client_company_id']
+            isOneToOne: false
+            referencedRelation: 'companies'
+            referencedColumns: ['id']
+          },
+        ]
+      }
     }
     Views: Record<never, never>
     Functions: {
@@ -350,6 +653,13 @@ export type Database = {
         | 'financeiro'
         | 'auditoria'
       entity_status: 'ativo' | 'inativo'
+      crm_relationship_type: 'prospect' | 'base_vegas'
+      crm_opportunity_origin:
+        | 'novo_prospect'
+        | 'base_vegas'
+        | 'importacao'
+        | 'indicacao'
+        | 'outro'
     }
     CompositeTypes: Record<never, never>
   }
@@ -370,3 +680,20 @@ export type DirectorRow = Database['public']['Tables']['directors']['Row']
 export type ManagerRow = Database['public']['Tables']['managers']['Row']
 export type TeamRow = Database['public']['Tables']['teams']['Row']
 export type SellerRow = Database['public']['Tables']['sellers']['Row']
+
+export type CompanyRow = Database['public']['Tables']['companies']['Row']
+export type CompanyInsert = Database['public']['Tables']['companies']['Insert']
+export type RelationshipRow =
+  Database['public']['Tables']['crm_company_relationships']['Row']
+export type RelationshipInsert =
+  Database['public']['Tables']['crm_company_relationships']['Insert']
+export type DemandOriginRow =
+  Database['public']['Tables']['crm_demand_origins']['Row']
+export type DemandRow =
+  Database['public']['Tables']['crm_accreditation_demands']['Row']
+export type DemandInsert =
+  Database['public']['Tables']['crm_accreditation_demands']['Insert']
+export type RelationshipType =
+  Database['public']['Enums']['crm_relationship_type']
+export type OpportunityOrigin =
+  Database['public']['Enums']['crm_opportunity_origin']
