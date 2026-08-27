@@ -102,6 +102,11 @@ echo "recriado (crm.cluster_local = sim)"
 titulo "harness (o que o Supabase provê)"
 psql -d "$BANCO" -q -v ON_ERROR_STOP=1 -f "$RAIZ/supabase/dev/00_harness_auth.sql"
 echo "auth.users, auth.uid(), anon/authenticated/service_role"
+# ANTES das migrations: `alter default privileges` só alcança o que for criado
+# depois dela. Sem isto, `set role authenticated` devolve permission denied e
+# nenhum teste chega a exercitar a RLS.
+psql -d "$BANCO" -q -v ON_ERROR_STOP=1 -f "$RAIZ/supabase/dev/02_harness_grants.sql"
+echo "grants de anon/authenticated/service_role — a RLS passa a ser a única barreira"
 
 titulo "migrations"
 aplicadas=0

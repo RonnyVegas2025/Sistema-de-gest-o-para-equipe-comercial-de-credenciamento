@@ -144,6 +144,19 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
   casos — `relation "resultado_trilha" does not exist` só aparece se o bloco de
   trabalho nunca rodou; a limpeza bem-sucedida deixaria a temp table de pé.
   Checar o primeiro sintoma não bastava, e não bastaria em nenhum dos dois casos.
+- **Mutação que NÃO reprova é sempre suspeita.** É o caso mais perigoso da
+  família acima, porque as duas leituras possíveis produzem o mesmo verde: a
+  confortável é *"o teste é robusto"*; a correta costuma ser *"o teste não
+  mede"*. E a leitura confortável não custa nada — basta seguir em frente.
+  Quebrar a barreira de propósito e ver o teste continuar verde é resultado a
+  investigar, nunca a comemorar. Três vezes nesta sprint:
+  - fixtures com `id: 'a1'` reprovavam por uuid inválido, e a recusa de
+    auto-desativação nunca era alcançada (etapa 1b);
+  - abrir só a policy de `UPDATE` não reprovava nada — o caso media com
+    `where id = <linha invisível>`, forma que a policy de SELECT filtra antes
+    (etapa 5c-0, e invalidou a M2 da `0013`);
+  - `with check (true)` não reprovava nada — a recusa vinha da policy de SELECT
+    aplicada à linha nova (etapa 5c-0, `RLS_PERMISSOES.md` §5.8).
 - **Contorno local para sintoma é sinal de defeito de padrão — procurar os
   irmãos antes de seguir.** Quando uma correção pontual resolve o sintoma num
   lugar, perguntar se o mesmo defeito existe nos casos análogos. O remendo deixa
@@ -160,6 +173,26 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
   revela: se remover a barreira alvo e o teste continuar verde, ele nunca a
   testou. Caso real: fixtures com `id: 'a1'` reprovavam por uuid inválido, e a
   recusa de auto-desativação nunca era alcançada (Sprint 2, etapa 1b).
+- **Policy só está provada quando alguém sujeito a ela executou a consulta.**
+  Ler o `polqual` no catálogo prova que a policy existe e que chama a função de
+  escopo — não que ela recorta. E nem o `psql` local nem o SQL Editor do painel
+  provam: os dois conectam como **dono**, que não é filtrado por RLS. Exercitar
+  exige `set local role authenticated` com JWT declarado, e isso exige que o
+  harness reproduza os grants do Supabase — sem eles o caso reprova por
+  `permission denied`, que é recusa pelo motivo errado (D-018).
+- **`UPDATE` com `where id = <linha invisível>` não testa a policy de UPDATE.**
+  A de SELECT filtra a linha antes, e o resultado é 0 com ou sem recorte na
+  escrita. Quem isola a policy de UPDATE é o `update` **sem `where`** — que é,
+  aliás, a forma que um consultor escreveria para reatribuir tudo para si de uma
+  vez, e ela alcança linhas que ele nem enxerga. Medido: 1 linha com recorte, 3
+  sem.
+- **Em tabela com SELECT recortado, o `with check` do UPDATE é redundante.** O
+  Postgres exige que a linha ATUALIZADA continue visível sob a policy de SELECT,
+  então empurrar o próprio registro para fora do escopo já é recusado por ela.
+  Consequência para o teste: um caso que espera 42501 ali **não prova nada sobre
+  o `with check`** — medido isolando as duas. Onde o `with check` é a única
+  barreira é na tabela de **SELECT amplo com escrita recortada** (`companies`,
+  §5.2), e lá nada na leitura denuncia a ausência dele.
 - **Recorte se verifica em TODAS as policies de escrita, não só na de leitura.**
   Uma tabela com `SELECT` recortado e `UPDATE` aberto deixa o consultor
   reatribuir para si um registro fora do escopo — e o `SELECT` recortado

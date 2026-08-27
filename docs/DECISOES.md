@@ -419,6 +419,32 @@ sprints depois.
 Registrada em `SPRINT-1.md` (seção "O que a Sprint 2 herda como aceite") e em
 `ROADMAP.md`, na Sprint 2.
 
+### Estado em 26/08/2026 — aplicada, não exercitada
+
+A `0013` e a `0014` nasceram com recorte nas três policies, conferido pelos
+scripts das próprias migrations. A regra de aceite funcionou.
+
+**Mas o que os scripts conferem é o `polqual` no catálogo:** que a policy existe
+e que chama `scoped_seller_ids()`. Não que ela recorta. Nenhuma linha foi lida
+por um consultor e negada a outro — nem no cluster local (`psql` como
+`postgres`), nem no painel (SQL Editor, também dono). **O dono do banco não é
+filtrado pela RLS.**
+
+O gate de cinco usuários da Sprint 1 tem o mesmo limite: mediu a **função** de
+escopo — a união contra "primeiro papel encontrado" (D-005) —, não a policy.
+Continua valendo pelo que mede.
+
+Causa medida em 26/08/2026: `set role authenticated` no cluster local devolve
+`permission denied for table companies`. O harness nunca reproduziu os grants que
+o Supabase configura, então nenhuma asserção de RLS jamais foi executada.
+
+**D-018 permanece meio cumprida, por um motivo diferente do original.** Antes
+faltava o enforcement; agora ele existe e falta exercitá-lo. A etapa 5c-0 da
+Sprint 2 fecha isso, e só então a decisão muda de estado.
+
+Declarar fechado antes disso seria repetir o DE-025 com documentação melhor —
+com o agravante de haver uma linha escrita afirmando o contrário.
+
 ---
 
 ## D-019 — `x-user-profile` só com remoção do header forjado
@@ -1601,4 +1627,5 @@ com o `scope` do vizinho e `write_record_status_company()` sem o motivo passam
 | A-003 | ~~Quem inativa o quê~~ | **Resolvido em D-022** |
 | A-004 | Vínculo `crm_tasks` → `crm_activities` na conclusão | Sprint 5; a coluna `source_task_id` já nasce prevista |
 | A-005 | Extração de `@vegas/tokens` e `@vegas/ui` | Quando houver terceiro sistema e estabilidade de componentes |
+| A-007 | Script de comparação de grants entre cluster e painel | **Gatilho: a primeira divergência observada entre os dois ambientes** — um script que passe local e falhe no hospedado, ou o contrário. Nesse momento, construir. Antes disso não: a etapa 5c-0 já reproduziu os grants à mão, e um comparador sem caso concreto para explicar mede o que se imagina, não o que diverge |
 | A-006 | `ARQUITETURA.md` | Sprint 0, **depois** de a fundação ser copiada. Região do Supabase, região/runtime da Vercel, IDs de ambiente, URLs e fornecedor de CNPJ ficam marcados como "a confirmar após configuração" — não se fabrica informação de ambiente |
