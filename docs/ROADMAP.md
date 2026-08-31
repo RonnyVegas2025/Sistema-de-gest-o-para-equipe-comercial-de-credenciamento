@@ -86,7 +86,7 @@ Se a bateria não passar, **não se avança para `companies`**. Detalhamento em
 
 ## Sprint 2 · Estabelecimentos, CNPJ e contatos
 
-Migrations `0012`–`0015`. *(Renumeradas duas vezes: a Sprint 1 consumiu `0010` e
+Migrations `0012`–`0016`. *(Renumeradas duas vezes: a Sprint 1 consumiu `0010` e
 `0011` com as correções da revisão, e o vínculo de demanda entrou como `0014`
 durante a sprint — ver `MODELO_DADOS.md` §8.)*
 

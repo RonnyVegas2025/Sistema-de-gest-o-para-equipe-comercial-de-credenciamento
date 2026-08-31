@@ -98,7 +98,8 @@ nunca é editada; correção é migration nova.
 5  0013  relacionamento + enums          primeiro enforcement real do recorte
 5b 0014  vínculo de demanda + marcadores requisito da diretoria (D-041)
 5c Página Novos Comércios                sem migration · prazo de uma semana
-6  0015  crm_contacts                    recorte transitivo · REORDENADA
+5c 0015  view crm_merchant_origin_status  security_invoker · ACRESCENTADA
+6  0016  crm_contacts                    recorte transitivo · REORDENADA
 7  Página do estabelecimento             sem migration
 8  Bateria de RLS §6.1                   sem migration
 9  Verificação final e documentação      sem migration
@@ -499,9 +500,52 @@ todas as empresas que o usam (D-041). O que o vínculo responde é outra coisa, 
 a objeção real: quantos credenciamentos nasceram de demanda e quantos de
 ampliação de rede.
 
-*Aceite:* os cinco estados; importação com prévia obrigatória; cadastro com cada
-uma das três origens, incluindo uma de melhoria de rede sem empresa; alvo de
-toque de 44 px.
+### Migration `0015` — a view que o plano não previa
+
+O plano desta etapa dizia "migration: nenhuma". **Estava errado, e o limite
+apareceu construindo.**
+
+O contador é um `NOT EXISTS` sobre `crm_accreditation_demands` atravessando o
+relacionamento. Pelo PostgREST isso exigiria filtro de nulo sobre recurso
+**aninhado**, forma que não temos como exercitar deste projeto — o egress para
+`supabase.co` é bloqueado e os testes da camada de dados usam dublê.
+
+As três saídas sem migration falhavam do mesmo jeito:
+
+| Saída | Falha |
+| --- | --- |
+| contar sobre a página carregada | conta a página, não o conjunto |
+| trazer tudo e contar no cliente | mata a paginação |
+| confiar na forma aninhada | número plausível e errado se não valer |
+
+**Contador que mente é pior que contador ausente** — ninguém confere um número
+que parece razoável. E dar o contador só à gestão o transformaria em relatório
+de auditoria: ele existe para quem cadastra ver o que ficou sem origem.
+
+`security_invoker = true` é o mecanismo. Sem ele a view roda como dona e devolve
+a base inteira a qualquer consultor, e **nada na tela denunciaria** — a tela
+mostra o que a view devolver, e lista maior parece base maior, não furo. O
+Security Advisor provavelmente vai apontar a view; o lint dele mira
+`security definer`, que é o oposto do que está ali.
+
+*Aceite da `0015` — CUMPRIDO no cluster:* 23 checagens estruturais e 7 casos de
+comportamento, com três mutações:
+
+| Mutação | Estrutura | Comportamento |
+| --- | --- | --- |
+| `security_invoker` desligado | reprova | casos 1 e 5 — o consultor passa a ver 3 de 4 |
+| filtro `is_merchant` removido | reprova | casos 4 e 5 |
+| `tem_origem` vira literal `true` | reprova | casos 2 e 5 |
+
+A segunda mutação **não reprovava no comportamento** na primeira tentativa:
+todas as fixtures eram comércio, então remover o filtro não mudava nada. Entrou
+uma empresa cliente **com** relacionamento — entidade comercial legítima, com
+responsável, que não é comércio credenciado — e só então o caso passou a medir.
+Mutação que não reprova é sempre suspeita.
+
+*Aceite da página:* os cinco estados; importação com prévia obrigatória; cadastro
+com cada uma das três origens, incluindo uma de melhoria de rede sem empresa;
+alvo de toque de 44 px.
 
 E o indicador de exceção: **contador de comércios sem origem no topo da página,
 visível por padrão — nunca filtro que alguém precisa lembrar de aplicar**
@@ -509,9 +553,10 @@ visível por padrão — nunca filtro que alguém precisa lembrar de aplicar**
 
 ---
 
-## 6 · Migration `0015` — `crm_contacts`
+## 6 · Migration `0016` — `crm_contacts`
 
-**Renumerada de `0014` para `0015`** pela entrada do vínculo de demanda (D-041).
+**Renumerada de `0014` para `0015`** pela entrada do vínculo de demanda (D-041),
+e de `0015` para `0016` pela view da etapa 5c — quarta renumeração.
 Contatos não participa da página "Novos Comércios", não tem dependente naquele
 requisito, e mover não quebra a regra de recorte — o recorte de contatos depende
 do relacionamento, que continua antes. É a terceira emenda de numeração;
@@ -632,7 +677,7 @@ que uma implementação errada reprova: com "primeiro papel encontrado", os dema
 devolvem números idênticos.
 
 O cenário de contatos fora do escopo fica para a etapa 6 — `crm_contacts` nasce
-na `0015`.
+na `0016`.
 
 ### Dois casos que passavam pela barreira errada
 
