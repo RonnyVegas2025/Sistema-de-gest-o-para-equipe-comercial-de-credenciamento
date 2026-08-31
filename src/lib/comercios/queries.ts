@@ -199,3 +199,31 @@ export async function listarOrigens() {
       .order('name'),
   )
 }
+
+/**
+ * O usuário tem vínculo de consultor?
+ *
+ * Existe para separar dois zeros que a tela não distingue sozinha
+ * (`RLS_PERMISSOES.md` §4.4): consultor **sem linha em `sellers`** enxerga zero
+ * registros — comportamento correto da RLS — e isso é idêntico a "ainda não há
+ * comércios cadastrados". Sem estado dedicado, vira chamado de suporte
+ * recorrente, e o usuário conclui que o sistema está quebrado.
+ *
+ * `sellers` tem leitura ampla (§5.2), então a consulta não depende de escopo —
+ * e é justamente por isso que ela funciona: um consultor sem vínculo consegue
+ * ler a tabela e confirmar que não está lá.
+ */
+export async function possuiVinculoDeConsultor(
+  profileId: string,
+): Promise<boolean> {
+  const supabase = createClient()
+  return (
+    countOf(
+      await supabase
+        .from('sellers')
+        .select('id', { count: 'exact', head: true })
+        .eq('profile_id', profileId)
+        .eq('status', 'ativo'),
+    ) > 0
+  )
+}
