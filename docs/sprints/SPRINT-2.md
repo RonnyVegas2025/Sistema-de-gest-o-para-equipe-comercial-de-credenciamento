@@ -547,6 +547,30 @@ Mutação que não reprova é sempre suspeita.
 com cada uma das três origens, incluindo uma de melhoria de rede sem empresa;
 alvo de toque de 44 px.
 
+### Ordem de entrega dentro da etapa
+
+A página entregou **seis** estados — aos cinco obrigatórios soma-se
+*sem vínculo* (§4.4 de `RLS_PERMISSOES.md`): consultor sem linha em `sellers`
+enxerga zero por comportamento correto da RLS, e isso é indistinguível de "não
+há dados".
+
+**A importação de planilha fica para depois de a tela rodar contra o projeto
+hospedado**, e o motivo é o limite permanente da §11 do `ARQUITETURA.md`: nada
+da camada de dados jamais tocou um PostgREST real. Empilhar a importação sobre
+uma camada de consulta não exercitada é construir sobre suposição — e o modo de
+falhar seria descobrir um problema de tradução PostgREST → SQL com duas camadas
+em cima, sem saber qual delas quebrou.
+
+É a mesma lógica de não aplicar duas migrations em voo (D-021).
+
+### Pendência com critério, não item solto
+
+Empresa demandante e consultor responsável são **campos de identificador
+digitado**. O formulário funciona e o vínculo é honesto, mas campo de UUID em
+tablet, em campo, não é usável. Entra na **auditoria de alvo touch da Sprint 6**
+(A-008), que é da mesma família — resolver junto evita o componente ser criado
+duas vezes.
+
 E o indicador de exceção: **contador de comércios sem origem no topo da página,
 visível por padrão — nunca filtro que alguém precisa lembrar de aplicar**
 (D-042, decisão 6). Exceção que só aparece quando procurada não é monitorada.

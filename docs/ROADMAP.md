@@ -210,6 +210,13 @@ Migrations `0021`–`0022`.
 - Baixa precisão **não bloqueia** o registro
 - **Pré-requisito da sprint:** auditoria de alvo touch de 44 px nos componentes
   (`button`, `input`, `select`, `checkbox`, linhas de tabela)
+- **Entra nesta auditoria, não como item solto (A-008):** substituir os campos
+  de identificador por um seletor com busca. A etapa 5c da Sprint 2 entregou
+  empresa demandante e consultor responsável como campo de UUID digitado — o
+  formulário funciona e o vínculo é honesto, mas **campo de identificador em
+  tablet, em campo, não é usável**. É problema de alvo e de entrada de dados na
+  mesma família que a auditoria já vai atravessar, e resolver junto evita um
+  componente novo criado duas vezes
 
 ---
 
