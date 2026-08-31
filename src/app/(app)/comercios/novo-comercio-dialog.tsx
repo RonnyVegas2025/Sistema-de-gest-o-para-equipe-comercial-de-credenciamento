@@ -1,7 +1,7 @@
 'use client'
 
-import { useFormState, useFormStatus } from 'react-dom'
-import { useEffect, useState } from 'react'
+import { useFormStatus } from 'react-dom'
+import { useState } from 'react'
 import {
   Alert,
   Button,
@@ -11,9 +11,6 @@ import {
   Modal,
   Select,
 } from '@/components/ui'
-import { useFeedbackDescartavel } from '@/hooks/use-feedback-descartavel'
-import { cadastrarComercio } from '@/lib/comercios/actions'
-import type { ComercioState } from '@/lib/comercios/actions'
 
 export type OrigemOpcao = {
   id: string
@@ -22,22 +19,40 @@ export type OrigemOpcao = {
   requires_client_company: boolean
 }
 
-const VAZIO: ComercioState = {}
-
+/**
+ * ===========================================================================
+ * ESTE DIÁLOGO NÃO POSSUI O ESTADO DO ENVIO — a página possui.
+ *
+ * A primeira versão tinha o `useFormState` aqui, e o retorno da action só era
+ * exibido dentro do modal. Consequência: fechado o modal, o resultado do que o
+ * usuário mandou some com ele. **Não saber se salvou é pior que uma mensagem
+ * errada** — o usuário tenta de novo, e a segunda tentativa bate no índice
+ * único de CNPJ, recebendo erro de duplicidade sobre um registro que ele mesmo
+ * acabou de criar.
+ *
+ * Com o estado na página, o retorno sobrevive ao fechamento. A mensagem geral
+ * aparece **nos dois lugares** de propósito: com o modal aberto, o aviso da
+ * página fica atrás dele, e um erro que o usuário não vê é o mesmo que erro
+ * nenhum.
+ *
+ * E o diálogo é montado sob demanda (`{aberto && <NovoComercioDialog/>}`), o
+ * que dispensa qualquer efeito de reset: cada abertura começa com estado novo.
+ * Foi um efeito de reset que causou o defeito de 31/08/2026.
+ * ===========================================================================
+ */
 export function NovoComercioDialog({
-  aberto,
   onFechar,
   origens,
+  acao,
+  erro,
+  campos,
 }: {
-  aberto: boolean
   onFechar: () => void
   origens: OrigemOpcao[]
+  acao: (formData: FormData) => void
+  erro?: string
+  campos?: Record<string, string>
 }) {
-  const [estado, acao] = useFormState(cadastrarComercio, VAZIO)
-  // Feedback pertence à interação que o produziu (D-037). Sem isto, a mensagem
-  // de um envio anterior reaparece ao abrir o diálogo de novo — e já custou uma
-  // rodada de investigação num bug que não existia.
-  const [visivel, descartar] = useFeedbackDescartavel(estado, VAZIO)
   const [origemId, setOrigemId] = useState('')
 
   const origem = origens.find((o) => o.id === origemId)
@@ -46,19 +61,9 @@ export function NovoComercioDialog({
   // com o mesmo comportamento (D-011, D-042).
   const exigeEmpresa = origem?.requires_client_company ?? false
 
-  useEffect(() => {
-    if (!aberto) return
-    descartar()
-    setOrigemId('')
-    // `descartar` é estável por `useCallback`; o efeito roda ao abrir.
-  }, [aberto, descartar])
-
-  const campos =
-    'ok' in visivel && visivel.ok === false ? visivel.campos : undefined
-
   return (
     <Modal
-      open={aberto}
+      open
       onClose={onFechar}
       title="Novo comércio"
       footer={
@@ -80,9 +85,7 @@ export function NovoComercioDialog({
         action={acao}
         className="flex flex-col gap-4"
       >
-        {'ok' in visivel && visivel.ok === false ? (
-          <Alert variant="danger">{visivel.error}</Alert>
-        ) : null}
+        {erro ? <Alert variant="danger">{erro}</Alert> : null}
 
         <div>
           <Label htmlFor="razaoSocial">Razão social</Label>

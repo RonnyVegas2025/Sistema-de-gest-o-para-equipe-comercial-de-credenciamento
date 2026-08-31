@@ -1,9 +1,13 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useCallback, useState } from 'react'
+import { useFormState } from 'react-dom'
+import { useCallback, useEffect, useState } from 'react'
 import { CircleAlert, Plus, Search, Store, UserMinus } from 'lucide-react'
+import { useFeedbackDescartavel } from '@/hooks/use-feedback-descartavel'
+import { cadastrarComercio, type ComercioState } from '@/lib/comercios/actions'
 import {
+  Alert,
   Badge,
   Button,
   Card,
@@ -27,6 +31,7 @@ import type {
 import { NovoComercioDialog, type OrigemOpcao } from './novo-comercio-dialog'
 
 const POR_PAGINA = 25
+const VAZIO: ComercioState = {}
 
 type Props = {
   contadores: ContadoresComercios
@@ -66,6 +71,35 @@ export function ComerciosClient({
   const [busca, setBusca] = useState(filtros.busca ?? '')
   const [dialogAberto, setDialogAberto] = useState(false)
 
+  /*
+   * O ESTADO DO ENVIO É DA PÁGINA, NÃO DO DIÁLOGO.
+   *
+   * Estava no diálogo, e o retorno da action sumia junto com o modal — o
+   * usuário fechava sem saber se salvou, tentava de novo, e a segunda tentativa
+   * batia no índice único de CNPJ com erro de duplicidade sobre um registro que
+   * ele mesmo tinha acabado de criar. Não saber se salvou é pior que mensagem
+   * errada.
+   */
+  const [estado, acao] = useFormState(cadastrarComercio, VAZIO)
+  // Feedback pertence à interação que o produziu (D-037). `descartar` tem
+  // identidade estável — é o que o teste do hook garante, e foi a ausência
+  // dessa garantia que causou o defeito de 31/08/2026.
+  const [visivel, descartar] = useFeedbackDescartavel(estado, VAZIO)
+
+  const sucesso = 'ok' in visivel && visivel.ok === true
+  const falha = 'ok' in visivel && visivel.ok === false
+
+  // Fecha o diálogo no sucesso. Depende só de `estado`: reabrir depois não
+  // dispara de novo, porque a identidade não mudou.
+  useEffect(() => {
+    if ('ok' in estado && estado.ok) setDialogAberto(false)
+  }, [estado])
+
+  const abrirDialogo = useCallback(() => {
+    descartar()
+    setDialogAberto(true)
+  }, [descartar])
+
   const navegar = useCallback(
     (mudancas: Record<string, string | null>) => {
       const q = new URLSearchParams(params.toString())
@@ -85,6 +119,22 @@ export function ComerciosClient({
 
   return (
     <div className="flex flex-col gap-4">
+      {/*
+        Vive FORA do diálogo, e é o ponto do conserto: com o modal fechado, este
+        é o único lugar em que o usuário descobre o que aconteceu.
+      */}
+      {sucesso ? (
+        <Alert variant="success" title="Comércio cadastrado">
+          Ele já aparece na lista abaixo. Se a origem não tiver sido gravada, o
+          contador de exceção acusa.
+        </Alert>
+      ) : null}
+      {falha ? (
+        <Alert variant="danger" title="O comércio não foi cadastrado">
+          {'error' in visivel ? visivel.error : null}
+        </Alert>
+      ) : null}
+
       <div className="grid gap-3 sm:grid-cols-3">
         <Contador
           icone={<Store className="h-5 w-5" />}
@@ -119,11 +169,7 @@ export function ComerciosClient({
       <FilterBar
         actions={
           podeCadastrar ? (
-            <Button
-              type="button"
-              className="min-h-11"
-              onClick={() => setDialogAberto(true)}
-            >
+            <Button type="button" className="min-h-11" onClick={abrirDialogo}>
               <Plus className="h-4 w-4" aria-hidden />
               Novo comércio
             </Button>
@@ -226,11 +272,20 @@ export function ComerciosClient({
         />
       ) : null}
 
-      <NovoComercioDialog
-        aberto={dialogAberto}
-        onFechar={() => setDialogAberto(false)}
-        origens={origens}
-      />
+      {/*
+        Montado sob demanda: cada abertura começa com estado interno novo, o que
+        dispensa efeito de reset. Foi um efeito de reset — disparando a cada
+        resposta do servidor em vez de na abertura — que causou o defeito.
+      */}
+      {dialogAberto ? (
+        <NovoComercioDialog
+          onFechar={() => setDialogAberto(false)}
+          origens={origens}
+          acao={acao}
+          erro={falha && 'error' in visivel ? visivel.error : undefined}
+          campos={falha && 'campos' in visivel ? visivel.campos : undefined}
+        />
+      ) : null}
     </div>
   )
 }

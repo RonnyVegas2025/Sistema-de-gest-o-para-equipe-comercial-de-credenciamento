@@ -92,3 +92,40 @@ describe('feedback descartável', () => {
     expect(screen.getByText('diálogo aberto')).toBeInTheDocument()
   })
 })
+
+/**
+ * A identidade de `descartar` é contrato, não detalhe.
+ *
+ * Sem isto, um `useCallback` que fecha sobre o estado volta a passar
+ * despercebido — e o defeito que ele causa não aparece no hook, e sim em quem
+ * o usa numa lista de dependências, a uma camada de distância.
+ */
+describe('identidade de descartar', () => {
+  it('NÃO muda quando o estado muda', () => {
+    const identidades: Array<() => void> = []
+    function Sonda({ estado }: { estado: object }) {
+      const [, descartar] = useFeedbackDescartavel(estado, {})
+      identidades.push(descartar)
+      return null
+    }
+    const { rerender } = render(<Sonda estado={{ n: 1 }} />)
+    rerender(<Sonda estado={{ n: 2 }} />)
+    rerender(<Sonda estado={{ n: 3 }} />)
+
+    expect(identidades.length).toBeGreaterThanOrEqual(3)
+    expect(new Set(identidades).size).toBe(1)
+  })
+
+  it('descarta o estado CORRENTE, não o da criação', () => {
+    function Sonda({ estado }: { estado: object }) {
+      const [visivel, descartar] = useFeedbackDescartavel(estado, {})
+      return <button onClick={descartar}>{JSON.stringify(visivel)}</button>
+    }
+    const segundo = { n: 2 }
+    const { rerender } = render(<Sonda estado={{ n: 1 }} />)
+    rerender(<Sonda estado={segundo} />)
+    screen.getByRole('button').click()
+    rerender(<Sonda estado={segundo} />)
+    expect(screen.getByRole('button').textContent).toBe('{}')
+  })
+})

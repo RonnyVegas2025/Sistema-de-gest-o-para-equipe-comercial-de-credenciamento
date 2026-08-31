@@ -152,6 +152,17 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
   casos — `relation "resultado_trilha" does not exist` só aparece se o bloco de
   trabalho nunca rodou; a limpeza bem-sucedida deixaria a temp table de pé.
   Checar o primeiro sintoma não bastava, e não bastaria em nenhum dos dois casos.
+- **Comentário que afirma propriedade do código é asserção sem teste — e é a
+  pior variante da família.** As outras são evidência fabricada pelo mecanismo
+  defeituoso; esta é afirmação escrita no código, e é pior de um jeito
+  específico: **o comentário sobrevive à refatoração, é lido como fato pelo
+  próximo, e não há nada que o reprove.** Teste falso pelo menos roda; comentário
+  falso só é lido. Medido: `// descartar é estável por useCallback` estava ao
+  lado de um `useCallback(..., [state])`, cuja identidade muda a cada resposta
+  do servidor — e foi essa frase que fez o efeito ao lado parecer correto por
+  duas revisões. Comentário que afirma **invariante** (estável, imutável,
+  idempotente, nunca nulo) precisa de teste que o sustente, ou vira suposição
+  com aparência de documentação.
 - **Mutação que NÃO reprova é sempre suspeita.** É o caso mais perigoso da
   família acima, porque as duas leituras possíveis produzem o mesmo verde: a
   confortável é *"o teste é robusto"*; a correta costuma ser *"o teste não
