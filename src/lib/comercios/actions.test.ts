@@ -115,6 +115,19 @@ describe('cadastrarComercio', () => {
     expect(inserts).toHaveLength(0)
   })
 
+  // Entrada exata do relato de 31/08/2026: nome no campo de identificador.
+  // Prova qual das duas suspeitas era a certa — se a validação barra, nenhuma
+  // linha entra, e o problema é só a mensagem não chegar à tela.
+  it('nome no campo de consultor: recusa SEM escrever nada', async () => {
+    const r = await cadastrarComercio(
+      {},
+      form({ responsavelId: 'Rafaela', cnpj: '53.332.185/0001-06' }),
+    )
+    expect(r).toMatchObject({ ok: false })
+    expect(inserts).toHaveLength(0)
+    if ('campos' in r) expect(r.campos?.responsavelId).toBeTruthy()
+  })
+
   it('CNPJ duplicado vira mensagem própria, não a do Postgres', async () => {
     respostas.set('companies', {
       data: null,
