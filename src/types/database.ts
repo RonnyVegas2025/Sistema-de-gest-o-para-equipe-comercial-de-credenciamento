@@ -12,7 +12,10 @@
  * real, não a partir do modelo em prosa.
  *
  * Estado verificado: migrations 0001 a 0014 aplicadas e verificadas contra o banco
- * real. `source_ref` entra nas quatro entidades pela 0007; `companies` pela
+ * real. A **0015** (view `crm_merchant_origin_status`) está aplicada e
+ * verificada apenas no cluster local — 23 checagens `OK`, reconstruído do zero.
+ * A forma abaixo veio de lá. **Confirmar contra o painel quando a migration for
+ * aplicada:** se a verificação de lá divergir, este tipo é que está errado. `source_ref` entra nas quatro entidades pela 0007; `companies` pela
  * 0012; `crm_company_relationships` pela 0013; `crm_demand_origins` e
  * `crm_accreditation_demands` pela 0014.
  *
@@ -629,7 +632,38 @@ export type Database = {
         ]
       }
     }
-    Views: Record<never, never>
+    Views: {
+      /**
+       * Projeção de leitura da 0015. `security_invoker = true` — o recorte é o
+       * das tabelas de baixo, não o do dono (D-045).
+       *
+       * Só `Row`: view com join não é atualizável no Postgres, e é bom que não
+       * seja — escrita passa pelas tabelas, onde as policies e as triggers
+       * estão. Não declarar `Insert`/`Update` faz o typecheck recusar antes de
+       * o banco recusar.
+       */
+      crm_merchant_origin_status: {
+        Row: {
+          relationship_id: string
+          company_id: string
+          responsible_seller_id: string | null
+          team_id: string | null
+          relationship_type: Database['public']['Enums']['crm_relationship_type']
+          relationship_started_at: string | null
+          ended_at: string | null
+          relationship_status: Database['public']['Enums']['entity_status']
+          legal_name: string
+          trade_name: string | null
+          cnpj: string | null
+          municipio: string | null
+          uf: string | null
+          company_status: Database['public']['Enums']['entity_status']
+          company_created_at: string
+          tem_origem: boolean
+        }
+        Relationships: []
+      }
+    }
     Functions: {
       auth_role: {
         Args: Record<PropertyKey, never>
@@ -693,6 +727,8 @@ export type DemandRow =
   Database['public']['Tables']['crm_accreditation_demands']['Row']
 export type DemandInsert =
   Database['public']['Tables']['crm_accreditation_demands']['Insert']
+export type MerchantOriginStatusRow =
+  Database['public']['Views']['crm_merchant_origin_status']['Row']
 export type RelationshipType =
   Database['public']['Enums']['crm_relationship_type']
 export type OpportunityOrigin =

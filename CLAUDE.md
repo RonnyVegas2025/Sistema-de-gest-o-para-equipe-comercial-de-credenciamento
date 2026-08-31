@@ -156,7 +156,17 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
     `where id = <linha invisível>`, forma que a policy de SELECT filtra antes
     (etapa 5c-0, e invalidou a M2 da `0013`);
   - `with check (true)` não reprovava nada — a recusa vinha da policy de SELECT
-    aplicada à linha nova (etapa 5c-0, `RLS_PERMISSOES.md` §5.8).
+    aplicada à linha nova (etapa 5c-0, `RLS_PERMISSOES.md` §5.8);
+  - remover o filtro `is_merchant` da view da `0015` não reprovava nada —
+    **todas as fixtures eram comércio**, então o filtro não tinha o que excluir.
+
+  **Corolário: fixture homogênea faz mutação de filtro passar verde.** Um filtro
+  só é exercitável se existir na base uma entidade que ele deve excluir. E ela
+  precisa ser **legítima** — na `0015` foi uma empresa cliente com
+  relacionamento e responsável, que é entidade comercial real e simplesmente não
+  é comércio credenciado. Fixture inventada só para o teste vira caso
+  decorativo: ninguém a mantém quando o modelo mudar, e ela não representa nada
+  que o sistema vá encontrar.
 - **Contorno local para sintoma é sinal de defeito de padrão — procurar os
   irmãos antes de seguir.** Quando uma correção pontual resolve o sintoma num
   lugar, perguntar se o mesmo defeito existe nos casos análogos. O remendo deixa
