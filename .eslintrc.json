@@ -68,6 +68,7 @@
         "src/lib/env.ts",
         "src/lib/auth/**/*",
         "src/lib/users/**/*",
+        "src/lib/comercios/**/*",
         "src/lib/directors/**/*",
         "src/lib/managers/**/*",
         "src/lib/teams/**/*",

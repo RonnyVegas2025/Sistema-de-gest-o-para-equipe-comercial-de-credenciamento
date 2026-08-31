@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
-import { Home, Users } from 'lucide-react'
+import { Home, Store, Users } from 'lucide-react'
 import type { AppRole } from '@/types/database'
 import { canRead, type ModuleKey } from '@/lib/permissions/can'
 
@@ -30,6 +30,7 @@ export type NavItem = {
  * morto no menu ensina o usuário a ignorar o menu.
  *
  * `Usuários` entrou junto com a página, na etapa 1 da Sprint 2, e não antes.
+ * `Novos Comércios` entrou junto com a página, na etapa 5c.
  */
 export const NAVIGATION: readonly NavItem[] = [
   {
@@ -38,6 +39,13 @@ export const NAVIGATION: readonly NavItem[] = [
     group: 'Operação',
     module: 'inicio',
     icon: Home,
+  },
+  {
+    label: 'Novos Comércios',
+    href: '/comercios',
+    group: 'Cadastros',
+    module: 'estabelecimentos',
+    icon: Store,
   },
   {
     label: 'Usuários',

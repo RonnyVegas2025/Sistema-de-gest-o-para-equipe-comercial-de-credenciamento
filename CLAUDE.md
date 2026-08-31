@@ -124,6 +124,14 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
   não: a informação não existe, e a ausência é indistinguível de uma entidade
   que nunca mudou de status. Cobertura de comportamento das funções de trilha
   não espera pela sprint em que der (D-044).
+- **Verificação se confere pelo CÓDIGO DE SAÍDA, nunca procurando a linha
+  esperada na saída.** `grep -E "Tests |Compiled"` acha a linha de sucesso de uma
+  etapa anterior e some com a falha da seguinte — `npm run verify` encadeia
+  cinco comandos, e o `format:check` reprovando não impede o grep de encontrar o
+  que se procurava. Aconteceu duas vezes seguidas nesta sprint, e a segunda só
+  apareceu porque o hook de pre-commit reprovou. Ler a saída atrás do que se
+  espera encontrar é a mesma família de cima, do lado de quem verifica: rodar,
+  checar `exit=`, e só então afirmar.
 - **Teste que protege fronteira de segurança é validado por mutação.** Escrever
   o teste, quebrar o código de propósito, confirmar que reprova, restaurar.
   Sem isso o teste é uma afirmação, não uma garantia — e teste de segurança que
@@ -156,7 +164,17 @@ Toda página dependente de dados considera cinco estados: `loading`, `empty`,
     `where id = <linha invisível>`, forma que a policy de SELECT filtra antes
     (etapa 5c-0, e invalidou a M2 da `0013`);
   - `with check (true)` não reprovava nada — a recusa vinha da policy de SELECT
-    aplicada à linha nova (etapa 5c-0, `RLS_PERMISSOES.md` §5.8).
+    aplicada à linha nova (etapa 5c-0, `RLS_PERMISSOES.md` §5.8);
+  - remover o filtro `is_merchant` da view da `0015` não reprovava nada —
+    **todas as fixtures eram comércio**, então o filtro não tinha o que excluir.
+
+  **Corolário: fixture homogênea faz mutação de filtro passar verde.** Um filtro
+  só é exercitável se existir na base uma entidade que ele deve excluir. E ela
+  precisa ser **legítima** — na `0015` foi uma empresa cliente com
+  relacionamento e responsável, que é entidade comercial real e simplesmente não
+  é comércio credenciado. Fixture inventada só para o teste vira caso
+  decorativo: ninguém a mantém quando o modelo mudar, e ela não representa nada
+  que o sistema vá encontrar.
 - **Contorno local para sintoma é sinal de defeito de padrão — procurar os
   irmãos antes de seguir.** Quando uma correção pontual resolve o sintoma num
   lugar, perguntar se o mesmo defeito existe nos casos análogos. O remendo deixa

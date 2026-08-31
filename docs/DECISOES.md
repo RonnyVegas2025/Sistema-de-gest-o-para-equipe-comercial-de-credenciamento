@@ -1618,6 +1618,77 @@ com o `scope` do vizinho e `write_record_status_company()` sem o motivo passam
 
 ---
 
+## D-045 — View de leitura com `security_invoker`, para que contador e lista não divirjam
+
+**Contexto.** A página "Novos Comércios" precisa de um contador de comércios sem
+origem de demanda — indicador de exceção visível por padrão (D-042, decisão 6).
+Isso é um `NOT EXISTS` sobre `crm_accreditation_demands` atravessando
+`crm_company_relationships`.
+
+Pelo PostgREST exigiria filtro de nulo sobre recurso **aninhado**, forma que não
+temos como exercitar: o egress para `supabase.co` é bloqueado neste ambiente e os
+testes da camada de dados usam dublê. As alternativas sem migration eram todas
+piores:
+
+| Saída | Falha |
+| --- | --- |
+| contar sobre a página carregada | conta a página, não o conjunto |
+| trazer tudo e contar no cliente | mata a paginação |
+| confiar na forma aninhada sem medir | número plausível e errado se não valer |
+
+**Contador que mente é pior que contador ausente.** Ninguém confere um número
+que parece razoável — é a mesma família do `Alert` pendurado (D-037) e da
+limpeza que parecia recusa (D-043), agora na tela.
+
+Dar o contador só à gestão também não serve: ele existe para **quem cadastra**
+ver o que ficou sem origem. Restrito à gestão vira relatório de auditoria, que é
+outra coisa.
+
+**Decisão.** View `crm_merchant_origin_status` (`0015`), projeção de leitura
+sobre relacionamento + empresas + demandas, com `tem_origem` calculado. Lista e
+contador saem da mesma relação, sob o mesmo recorte.
+
+**`security_invoker = true` é o mecanismo, não um detalhe de estilo.** View comum
+roda com os privilégios de quem a criou; como as migrations são aplicadas pelo
+dono, uma view sem a opção **atravessaria a RLS de todas as tabelas de baixo** e
+devolveria a base inteira a qualquer consultor. E nada na tela denunciaria: a
+tela mostra o que a view devolver, e lista maior parece base maior, não furo.
+
+Vale inclusive para o `exists` do `tem_origem`, avaliado sob a policy da demanda
+— a coluna responde *"tem origem que eu posso ver"*, que é a leitura certa para
+um contador que precisa bater com a lista ao lado.
+
+**O Security Advisor do Supabase provavelmente vai apontar a view.** O lint dele
+mira view `security definer`, que é o oposto do que está ali. Conferir
+`reloptions` antes de "corrigir": remover a linha é abrir o furo. Mesma natureza
+da exceção documentada das funções de trilha (D-023).
+
+**Verificação em dois níveis, por exigência explícita.** `0015_verificacao.sql`
+confere `security_invoker` como **atributo** — não só a existência da view —,
+mais colunas, ausência de coluna extra e as relações da definição.
+`supabase/dev/comportamento/0015_view.sql` exercita o recorte sob
+`set local role authenticated`, e inclui um caso que confere a **aritmética**
+`total = com origem + sem origem` sobre a mesma relação: é a invariante de que a
+página depende.
+
+Três mutações. A do `security_invoker` faz o consultor passar de 2 para 3 de 4
+comércios. A do filtro `is_merchant` **não reprovava no comportamento** na
+primeira tentativa — todas as fixtures eram comércio —, e só passou a medir com
+uma empresa cliente **com** relacionamento entre elas.
+
+**Consequência de plano registrada, não escondida:** o plano da etapa 5c dizia
+"migration: nenhuma", e estava errado. Plano feito antes de construir descobre
+menos que construção; a alternativa seria manter a promessa entregando um
+contador que não se sabe se funciona. `crm_contacts` vai para `0016` — quarta
+renumeração.
+
+**Alternativas descartadas.** Função `security definer` devolvendo a lista:
+atravessaria a RLS por desenho, e teríamos de reimplementar o recorte dentro
+dela — segunda cópia da regra, que diverge. Coluna materializada `tem_origem` em
+`companies`: estado derivado guardado, que passa a poder mentir sozinho.
+
+---
+
 # Decisões em aberto
 
 | # | Assunto | Quando decidir |
@@ -1627,5 +1698,6 @@ com o `scope` do vizinho e `write_record_status_company()` sem o motivo passam
 | A-003 | ~~Quem inativa o quê~~ | **Resolvido em D-022** |
 | A-004 | Vínculo `crm_tasks` → `crm_activities` na conclusão | Sprint 5; a coluna `source_task_id` já nasce prevista |
 | A-005 | Extração de `@vegas/tokens` e `@vegas/ui` | Quando houver terceiro sistema e estabilidade de componentes |
+| A-008 | Seletor com busca no lugar de campo de identificador | **Na auditoria de touch da Sprint 6, não como item solto.** A etapa 5c entregou empresa demandante e consultor como UUID digitado — funciona, e não é usável em tablet no campo. Mesma família da auditoria de 44 px; resolver junto evita criar o componente duas vezes |
 | A-007 | Script de comparação de grants entre cluster e painel | **Gatilho: a primeira divergência observada entre os dois ambientes** — um script que passe local e falhe no hospedado, ou o contrário. Nesse momento, construir. Antes disso não: a etapa 5c-0 já reproduziu os grants à mão, e um comparador sem caso concreto para explicar mede o que se imagina, não o que diverge |
 | A-006 | `ARQUITETURA.md` | Sprint 0, **depois** de a fundação ser copiada. Região do Supabase, região/runtime da Vercel, IDs de ambiente, URLs e fornecedor de CNPJ ficam marcados como "a confirmar após configuração" — não se fabrica informação de ambiente |

@@ -86,7 +86,7 @@ Se a bateria não passar, **não se avança para `companies`**. Detalhamento em
 
 ## Sprint 2 · Estabelecimentos, CNPJ e contatos
 
-Migrations `0012`–`0015`. *(Renumeradas duas vezes: a Sprint 1 consumiu `0010` e
+Migrations `0012`–`0016`. *(Renumeradas duas vezes: a Sprint 1 consumiu `0010` e
 `0011` com as correções da revisão, e o vínculo de demanda entrou como `0014`
 durante a sprint — ver `MODELO_DADOS.md` §8.)*
 
@@ -210,6 +210,13 @@ Migrations `0021`–`0022`.
 - Baixa precisão **não bloqueia** o registro
 - **Pré-requisito da sprint:** auditoria de alvo touch de 44 px nos componentes
   (`button`, `input`, `select`, `checkbox`, linhas de tabela)
+- **Entra nesta auditoria, não como item solto (A-008):** substituir os campos
+  de identificador por um seletor com busca. A etapa 5c da Sprint 2 entregou
+  empresa demandante e consultor responsável como campo de UUID digitado — o
+  formulário funciona e o vínculo é honesto, mas **campo de identificador em
+  tablet, em campo, não é usável**. É problema de alvo e de entrada de dados na
+  mesma família que a auditoria já vai atravessar, e resolver junto evita um
+  componente novo criado duas vezes
 
 ---
 

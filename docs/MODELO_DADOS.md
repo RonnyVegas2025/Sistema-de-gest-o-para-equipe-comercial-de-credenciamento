@@ -803,7 +803,8 @@ Uma por vez, com confirmação antes da próxima (D-021).
 > **Terceira emenda — o vínculo de demanda entrou como `0014`.** Requisito da
 > diretoria acrescentado durante a Sprint 2 (D-041): comércio credenciado ×
 > empresa demandante, N:N, mais os marcadores explícitos de papel em
-> `companies`. `crm_contacts` deslocou para `0015`, e tudo daí em diante subiu
+> `companies`. `crm_contacts` deslocou para `0016` (quarta renumeração: a view da
+> etapa 5c consumiu a `0015`), e tudo daí em diante subiu
 > **uma** posição.
 >
 > Contatos cedeu a vez porque não participa da página "Novos Comércios" e não
@@ -826,7 +827,8 @@ Uma por vez, com confirmação antes da próxima (D-021).
 | 0012 | `companies` + trilha cadastral | 2 |
 | 0013 | `crm_relationship_type`, `crm_opportunity_origin`, `crm_company_relationships` + trilha cadastral | 2 |
 | 0014 | marcadores `is_merchant`/`is_client_company` em `companies` + vínculo de demanda N:N + trilha e recorte (D-041) | 2 |
-| 0015 | `crm_contacts` + trilha cadastral — **depois** do relacionamento, ver emendas acima | 2 |
+| 0015 | view `crm_merchant_origin_status` — projeção de leitura, `security_invoker=true` | 2 |
+| 0016 | `crm_contacts` + trilha cadastral — **depois** do relacionamento, ver emendas acima | 2 |
 | 0016 | `crm_portfolios`, `crm_portfolio_companies`, `crm_assignment_history` | 3 |
 | 0017 | `commercial_products`, `crm_loss_reasons` | 4 |
 | 0018 | `crm_opportunity_status`, `crm_opportunities` + índice único parcial + CHECK | 4 |

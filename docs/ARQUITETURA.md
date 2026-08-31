@@ -281,9 +281,34 @@ Distinto de §10: aqui o código existe, mas nunca rodou contra o Supabase.
 
 | Item | Coberto por |
 | --- | --- |
+| **Toda a camada de dados, contra um PostgREST real** | dublê — ver abaixo, é limite de ambiente e não de etapa |
 | Edge Function `admin-create-user`, criação de usuário | implantada e recusando anônimo (`401 no_session`); o caminho completo **não tem chamador** — não existe `/usuarios` nem Server Action que a invoque. A tela é da Sprint 2 |
 | Persistência da importação | cliente dublado |
 | `e2e/auth.spec.ts` | nada — nunca executado, e nenhum workflow o roda |
+
+### Nenhuma consulta deste projeto jamais rodou contra um PostgREST real
+
+**Limite permanente do ambiente de desenvolvimento, não circunstância de uma
+etapa.** O egress para `supabase.co` é bloqueado pela política de rede
+(`CONNECT tunnel failed, 403`), e todos os testes da camada de dados usam dublê
+do cliente `supabase-js`.
+
+Vale para **tudo o que já foi construído**, não só para o que é novo:
+`src/lib/users/queries.ts`, `src/lib/users/actions.ts`, `src/lib/import/**` e
+`src/lib/comercios/**`. O que os testes medem é a **forma** da consulta — contra
+qual relação, com quais filtros, em que ordem. O que fica sem cobertura
+executável é a tradução **PostgREST → SQL**: se uma forma de filtro não
+significar o que supomos, o teste passa e a consulta erra.
+
+O modo de falhar mais perigoso desta classe é o silencioso: uma consulta que
+devolve um conjunto plausível e errado. Foi por isso que o contador da página
+"Novos Comércios" virou uma view no banco (`0015`, D-045) em vez de um filtro de
+nulo sobre recurso aninhado — a view é exercitável aqui, o filtro não era.
+
+**É a mesma classe do limite da §8 da Sprint 2:** provado num ambiente, não
+provado no outro. O que fecha esta lacuna não é mais teste com dublê — é o
+primeiro carregamento de cada tela contra o projeto hospedado, e é isso que a
+etapa 6 do processo (`testar no navegador`) significa aqui.
 
 **Login, troca obrigatória de senha e bloqueio de usuário desativado saíram
 desta lista.** Foram verificados contra a aplicação no ar em 24/08/2026 —
@@ -294,8 +319,10 @@ detalhe em `docs/sprints/SPRINT-1-REVISAO.md` §7.1.
 duas origens somadas. Resultado em `docs/sprints/SPRINT-1-REVISAO.md` §5.1;
 roteiro em `docs/sprints/SPRINT-1-GATE.md`.
 
-As onze migrations, essas sim, foram aplicadas e verificadas contra o banco real:
-**255 checagens**, todas OK.
+As migrations, essas sim, são aplicadas e verificadas contra o banco real —
+`0001`–`0014`, com a `0015` pendente de aplicação no painel. O cluster local
+soma **433 checagens estruturais e 37 casos de comportamento** na reconstrução
+do zero.
 
 ## 12. Ordem para destravar
 

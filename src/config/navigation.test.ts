@@ -13,7 +13,20 @@ describe('menu', () => {
   it('nenhum item morto: todo item aponta para rota existente nesta etapa', () => {
     // A lista cresce junto com as páginas, nunca antes delas. Um href aqui sem
     // rota correspondente é item morto, e item morto ensina a ignorar o menu.
-    expect(NAVIGATION.map((i) => i.href)).toEqual(['/inicio', '/usuarios'])
+    expect(NAVIGATION.map((i) => i.href)).toEqual([
+      '/inicio',
+      '/comercios',
+      '/usuarios',
+    ])
+  })
+
+  it('Novos Comércios aparece para todos os papéis que leem estabelecimentos', () => {
+    // `estabelecimentos` tem leitura ampla (RLS_PERMISSOES §5.2) — inclusive
+    // auditoria e financeiro. O menu espelha isso; quem recorta é a RLS.
+    for (const role of ALL_ROLES) {
+      const visivel = navigationFor(role).some((i) => i.href === '/comercios')
+      expect(visivel).toBe(canRead(role, 'estabelecimentos'))
+    }
   })
 
   it('Usuários só aparece para administrador', () => {
